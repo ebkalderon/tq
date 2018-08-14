@@ -1,0 +1,33 @@
+whitespace = _{ " " }
+comment = _{ "#" ~ (!("\n" | eoi) ~ any)* ~ "\n" }
+
+alpha = _{ 'a'..'z' | 'A'..'Z' }
+digit = _{ '0'..'9' }
+
+int = { '0'..'9' ~ ('0'..'9' | "_")* }
+
+ident_char = _{ alpha | digit | "_" | "-" }
+ident = { ident_char ~ ident_char*  }
+
+string = { "\"" ~ (raw_string | escape)* ~ "\"" }
+raw_string = { (!("\\" | "\"") ~ any)+ }
+hex = _{ '0'..'9' | 'a'..'f' | 'A'..'F' }
+unicode_hex_short = { hex{4} }
+unicode_hex_long = { hex{8} }
+predefined = { "b" | "t" | "n" | "f" | "r" | "\\" | "\"" | "'" }
+unicode = { ("u{" ~ unicode_hex_short ~ "}") | ("U{" ~ unicode_hex_long ~ "}") }
+escape = { "\\" ~ (predefined | unicode) }
+
+index_array = { "[" ~ int ~ "]" }
+index_iter = { "[]" }
+index_object = { "[" ~ string ~ "]" }
+index_slice = { "[" ~ int? ~ ":" ~ int? ~ "]" }
+index_invalid = { "[" ~ any ~ any* }
+index = { index_array | index_iter | index_object | index_slice | index_invalid }
+
+optional = { "?" }
+
+identity = _{ "." }
+filter = _{ identity ~ ((ident | string) ~ optional?)? ~ (index ~ optional?)* }
+
+expr = { soi ~ (filter | comment)+ ~ eoi }
