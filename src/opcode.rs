@@ -29,7 +29,7 @@ impl<'a> Opcodes<'a> {
     }
 }
 
-fn execute<'a>(opcodes: &[Opcode], toml: &'a mut Iterator<Item = Option<Value>>) -> Vec<Option<Value>> {
+fn execute(opcodes: &[Opcode], toml: &mut Iterator<Item = Option<Value>>) -> Vec<Option<Value>> {
     if let Some(opcode) = opcodes.first() {
         match *opcode {
             Opcode::IndexArray(idx) => {
