@@ -69,7 +69,7 @@ fn execute(opcodes: &[Opcode], toml: &mut Iterator<Item = Option<Value>>) -> Vec
                                 end.unwrap_or(inner.len())
                             };
 
-                            Value::String(value.as_str().unwrap()[begin..end].to_string())
+                            Value::String(inner[begin..end].to_string())
                         } else {
                             panic!(format!("Cannot slice index a {}", value.type_str()));
                         }
@@ -105,7 +105,7 @@ fn index_name<'a>(name: &'a str, toml: &'a mut Iterator<Item = Option<Value>>) -
         .map(move |value| value.and_then(|v| v.get(name).cloned()))
 }
 
-fn iterate<'a>(toml: &'a mut Iterator<Item = Option<Value>>) -> impl Iterator<Item = Option<Value>> + 'a {
+fn iterate(toml: &mut Iterator<Item = Option<Value>>) -> impl Iterator<Item = Option<Value>> {
     let mut values = Vec::new();
 
     for v in toml {
