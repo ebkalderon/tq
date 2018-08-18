@@ -86,7 +86,7 @@ fn execute(opcodes: &[Opcode], toml: &mut Iterator<Item = Option<Value>>) -> Vec
 }
 
 fn index_array<'a>(index: usize, toml: &'a mut Iterator<Item = Option<Value>>) -> impl Iterator<Item = Option<Value>> + 'a {
-    toml.into_iter().map(move |opt| {
+    toml.map(move |opt| {
         opt.map(|value| {
             if value.is_array() {
                 value
@@ -100,9 +100,7 @@ fn index_array<'a>(index: usize, toml: &'a mut Iterator<Item = Option<Value>>) -
 }
 
 fn index_name<'a>(name: &'a str, toml: &'a mut Iterator<Item = Option<Value>>) -> impl Iterator<Item = Option<Value>> + 'a {
-    toml
-        .into_iter()
-        .map(move |value| value.and_then(|v| v.get(name).cloned()))
+    toml.map(move |value| value.and_then(|v| v.get(name).cloned()))
 }
 
 fn iterate(toml: &mut Iterator<Item = Option<Value>>) -> impl Iterator<Item = Option<Value>> {
