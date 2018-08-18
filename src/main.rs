@@ -1,4 +1,4 @@
-#![type_length_limit="2097152"]
+#![forbid(unsafe_code)]
 
 extern crate env_logger;
 #[macro_use]
