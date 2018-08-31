@@ -22,7 +22,7 @@ impl<'a> Opcodes<'a> {
 
     pub fn execute<I>(self, toml: I) -> Vec<Option<Value>>
     where
-        I: IntoIterator<Item = Option<Value>> + 'static
+        I: IntoIterator<Item = Option<Value>> + 'static,
     {
         let Opcodes(opcodes) = self;
         execute(&opcodes, &mut toml.into_iter())
@@ -78,14 +78,17 @@ fn execute(opcodes: &[Opcode], toml: &mut Iterator<Item = Option<Value>>) -> Vec
 
                 let remaining = &opcodes[1..];
                 execute(remaining, &mut toml)
-            },
+            }
         }
     } else {
         toml.collect()
     }
 }
 
-fn index_array<'a>(index: usize, toml: &'a mut Iterator<Item = Option<Value>>) -> impl Iterator<Item = Option<Value>> + 'a {
+fn index_array<'a>(
+    index: usize,
+    toml: &'a mut Iterator<Item = Option<Value>>,
+) -> impl Iterator<Item = Option<Value>> + 'a {
     toml.map(move |opt| {
         opt.map(|value| {
             if value.is_array() {
@@ -99,7 +102,10 @@ fn index_array<'a>(index: usize, toml: &'a mut Iterator<Item = Option<Value>>) -
     })
 }
 
-fn index_name<'a>(name: &'a str, toml: &'a mut Iterator<Item = Option<Value>>) -> impl Iterator<Item = Option<Value>> + 'a {
+fn index_name<'a>(
+    name: &'a str,
+    toml: &'a mut Iterator<Item = Option<Value>>,
+) -> impl Iterator<Item = Option<Value>> + 'a {
     toml.map(move |value| value.and_then(|v| v.get(name).cloned()))
 }
 
@@ -109,17 +115,14 @@ fn iterate(toml: &mut Iterator<Item = Option<Value>>) -> impl Iterator<Item = Op
     for v in toml {
         if let Some(value) = v {
             if value.is_array() {
-                values.extend(
-                    value.as_array().cloned().unwrap().into_iter().map(Some),
-                );
+                values.extend(value.as_array().cloned().unwrap().into_iter().map(Some));
             } else if value.is_table() {
-                values
-                    .extend(value.as_table().unwrap().values().cloned().map(Some));
+                values.extend(value.as_table().unwrap().values().cloned().map(Some));
             } else {
                 panic!("Only arrays and objects can be turned into iterators");
             }
         }
-    }   
+    }
 
     values.into_iter()
 }

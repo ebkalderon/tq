@@ -8,8 +8,8 @@ pub struct FilterParser;
 mod tests {
     use super::*;
 
-    use pest::Parser;
     use pest::iterators::Pair;
+    use pest::Parser;
 
     #[test]
     fn filter_identity() {

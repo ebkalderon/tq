@@ -22,11 +22,12 @@ use pest::Parser;
 use structopt::StructOpt;
 use toml::Value;
 
-use parser::{FilterParser, Rule};
 use opcode::{Opcode, Opcodes};
+use parser::{FilterParser, Rule};
 
-mod parser;
+mod filter;
 mod opcode;
+mod parser;
 
 #[derive(Debug, Fail)]
 pub enum Error {
@@ -108,23 +109,23 @@ fn main() {
                             } else if index_kind.as_str().ends_with(":]") {
                                 let begin = index_kind.into_inner().nth(0).unwrap();
                                 opcodes.push(Opcode::IndexSlice(
-                                        Some(begin.as_str().parse().unwrap()),
-                                        None,
-                                        ));
+                                    Some(begin.as_str().parse().unwrap()),
+                                    None,
+                                ));
                             } else if index_kind.as_str().starts_with("[:") {
                                 let end = index_kind.into_inner().nth(0).unwrap();
                                 opcodes.push(Opcode::IndexSlice(
-                                        None,
-                                        Some(end.as_str().parse().unwrap()),
-                                        ));
+                                    None,
+                                    Some(end.as_str().parse().unwrap()),
+                                ));
                             } else {
                                 let range: Vec<_> = index_kind.into_inner().collect();
                                 let begin = &range[0];
                                 let end = &range[1];
                                 opcodes.push(Opcode::IndexSlice(
-                                        Some(begin.as_str().parse().unwrap()),
-                                        Some(end.as_str().parse().unwrap()),
-                                        ));
+                                    Some(begin.as_str().parse().unwrap()),
+                                    Some(end.as_str().parse().unwrap()),
+                                ));
                             }
                         }
                         Rule::index_invalid => panic!("Index is not a string, integer, or slice"),
