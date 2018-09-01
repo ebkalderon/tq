@@ -64,7 +64,10 @@ FnCallExpr: Expr = {
         Expr::FnCall(sym, args)
     },
 };
-VariableExpr: Expr = <v:Variable> => Expr::Variable(v);
+VariableExpr: Expr = <Variable> => Expr::Variable(<>);
+
+LabelExpr: Expr = "label" <Label> => Expr::Label(<>);
+BreakExpr: Expr = "break" <Label> => Expr::Break(<>);
 
 Expr: Expr = {
     IdentityExpr,
@@ -76,6 +79,9 @@ Expr: Expr = {
     TableExpr,
     FnCallExpr,
     VariableExpr,
+
+    LabelExpr,
+    BreakExpr,
 };
 
 Stmt: Stmt = {

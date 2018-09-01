@@ -184,16 +184,8 @@ mod tests {
     fn simple_ast() {
         let val = ::grammar::FilterParser::new().parse("import \"blah/thing\" as $blah; .").unwrap();
         println!("{:?}", val);
+
         let val = ::grammar::FilterParser::new().parse("import 'thing'; { blah = { thing = map(.) } }").unwrap();
         println!("{:?}", val);
-
-        let ast = [
-            Stmt::ImportMod("thing/blah".into(), None),
-            Stmt::Expr(Expr::Binary(
-                BinaryOp::Pipe,
-                Box::new(Expr::Index(Box::new(Expr::Identity), None)),
-                Box::new(Expr::FnCall(Ident("length".into()), Vec::new())),
-            )),
-        ];
     }
 }
