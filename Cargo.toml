@@ -8,8 +8,11 @@ license = "MIT/Apache-2.0"
 [dependencies]
 env_logger = "0.5"
 failure = "0.1"
+lalrpop-util = "0.15.2"
 log = "0.4"
-pest = "1.0"
-pest_derive = "1.0"
+regex = "1.0"
 structopt = "0.2"
 toml = "0.4"
+
+[build-dependencies]
+lalrpop = "0.15.2"

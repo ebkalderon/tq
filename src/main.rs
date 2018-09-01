@@ -6,9 +6,6 @@ extern crate env_logger;
 extern crate failure;
 #[macro_use]
 extern crate log;
-extern crate pest;
-#[macro_use]
-extern crate pest_derive;
 #[macro_use]
 extern crate structopt;
 extern crate toml;
@@ -19,7 +16,6 @@ use std::str::FromStr;
 
 use failure::ResultExt;
 use log::LevelFilter;
-use pest::Parser;
 use structopt::StructOpt;
 use toml::Value;
 

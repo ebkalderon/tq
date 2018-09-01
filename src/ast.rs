@@ -1,16 +1,15 @@
+use std::path::PathBuf;
+
 use toml::value::Datetime;
 
 #[derive(Debug)]
-pub struct Symbol(String);
+pub struct Ident(pub String);
 
 #[derive(Debug)]
-pub struct Ident(String);
+pub struct Label(pub Ident);
 
 #[derive(Debug)]
-pub struct Label(Ident);
-
-#[derive(Debug)]
-pub struct Variable(Ident);
+pub struct Variable(pub Ident);
 
 #[derive(Debug)]
 pub enum Key {
@@ -20,8 +19,7 @@ pub enum Key {
 
 #[derive(Debug)]
 pub struct Table {
-    name: Key,
-    fields: Vec<(Key, Expr)>,
+    pub fields: Vec<(Key, Expr)>,
 }
 
 #[derive(Debug)]
@@ -95,7 +93,7 @@ pub struct ForEach {
 
 #[derive(Debug)]
 pub struct FnDecl {
-    pub name: Symbol,
+    pub name: Ident,
     pub args: Vec<FnArg>,
 }
 
@@ -121,7 +119,7 @@ pub enum Expr {
     /// `thing = { foo = "bar", baz = 5 }`
     Table(Table),
     /// `map(. + 1)`
-    FnCall(Symbol, Vec<Expr>),
+    FnCall(Ident, Vec<Expr>),
     /// `$bar`
     Variable(Variable),
 
@@ -138,8 +136,8 @@ pub enum Expr {
 
     /// `.package`, `.dependencies.log`
     Field(Box<Expr>, Box<Expr>),
-    /// `.package.authors[1]`, `.package.authors[2:5]`
-    Index(Box<Expr>, Box<Expr>),
+    /// `.package.authors[]`, `.package.authors[1]`, `.package.authors[2:5]`
+    Index(Box<Expr>, Option<Box<Expr>>),
     /// `6:`, `:5`, `4:7`
     Range(Option<Box<Expr>>, Option<Box<Expr>>),
     /// `.package as $pkg`
@@ -152,15 +150,50 @@ pub enum Expr {
     Break(Label),
 
     /// `if A then B elif C else D end`
-    If(Vec<(Expr, Expr)>, Option<Box<Expr>>),
+    IfElse(Vec<(Expr, Expr)>, Box<Expr>),
     /// `reduce EXPR as $var (ACC; EVAL)`
     Reduce(Box<Reduce>),
     /// `foreach EXPR as $var (INIT; UPDATE; EXTRACT)`
     ForEach(Box<ForEach>),
     /// `.package.name?`, `try .package.name`, `try .package.name catch 'nonexistent'`
     Try(Box<Expr>, Option<Box<Expr>>),
+
     /// `def increment: . + 1;`
     /// `def addvalue(f): f as $f | map(. + $f);`
     /// `def addvalue($f): map(. + $f);`
-    Fn(FnDecl, Box<Expr>),
+    Fn(FnDecl, Vec<Stmt>),
+}
+
+#[derive(Debug)]
+pub enum Stmt {
+    /// `include "foo/bar";`
+    IncludeMod(PathBuf),
+    /// `import "foo/bar";`, `import "foo/bar" as bar;`
+    ImportMod(PathBuf, Option<Ident>),
+    /// `import "foo/bar" as $bar;`
+    ImportToml(PathBuf, Variable),
+    /// Main expression to evaluate.
+    Expr(Expr),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn simple_ast() {
+        let val = ::grammar::FilterParser::new().parse("import \"blah/thing\" as $blah; .").unwrap();
+        println!("{:?}", val);
+        let val = ::grammar::FilterParser::new().parse("import 'thing'; { blah = { thing = map(.) } }").unwrap();
+        println!("{:?}", val);
+
+        let ast = [
+            Stmt::ImportMod("thing/blah".into(), None),
+            Stmt::Expr(Expr::Binary(
+                BinaryOp::Pipe,
+                Box::new(Expr::Index(Box::new(Expr::Identity), None)),
+                Box::new(Expr::FnCall(Ident("length".into()), Vec::new())),
+            )),
+        ];
+    }
 }
