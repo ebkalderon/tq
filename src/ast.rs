@@ -114,8 +114,8 @@ pub enum Expr {
     Ident(Ident),
     /// `12`, `-4.0`, `false`, `"foo"`, `'bar'`
     Value(Value),
-    /// `[1, 2, 3, 4]`
-    Array(Vec<Expr>),
+    /// `[1, 2, 3, 4]`, `[map(. + 1)]`
+    Array(Box<Expr>),
     /// `thing = { foo = "bar", baz = 5 }`
     Table(Table),
     /// `map(. + 1)`
@@ -132,14 +132,14 @@ pub enum Expr {
     /// `.package.authors[] += "suffix"`
     AssignOp(BinaryOp, Box<Expr>, Box<Expr>),
     /// `.dependencies, .dev-dependencies, .build-dependencies`
-    Split(Vec<Expr>),
+    Comma(Vec<Expr>),
 
     /// `.package`, `.dependencies.log`
-    Field(Box<Expr>, Box<Expr>),
+    Field(Box<Expr>, Ident),
     /// `.package.authors[]`, `.package.authors[1]`, `.package.authors[2:5]`
     Index(Box<Expr>, Option<Box<Expr>>),
     /// `6:`, `:5`, `4:7`
-    Range(Option<Box<Expr>>, Option<Box<Expr>>),
+    Slice(Option<Box<Expr>>, Option<Box<Expr>>),
     /// `.package as $pkg`
     /// `.package as { name = $name, authors = $authors }`
     Binding(Box<Expr>, Box<Expr>),
@@ -185,7 +185,16 @@ mod tests {
         let val = ::grammar::FilterParser::new().parse("import \"blah/thing\" as $blah; .").unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse("import 'thing'; { blah = { thing = map(.) } }").unwrap();
+        // let val = ::grammar::FilterParser::new().parse("import 'thing'; { blah = { thing = map(. + 1) } }").unwrap();
+        // println!("{:?}", val);
+
+        let val = ::grammar::FilterParser::new().parse("[1, 2, 3] | map(. + 1)").unwrap();
+        println!("{:?}", val);
+
+        let val = ::grammar::FilterParser::new().parse(".package[], .dependencies[] | . + 1").unwrap();
+        println!("{:?}", val);
+
+        let val = ::grammar::FilterParser::new().parse(".name.thing").unwrap();
         println!("{:?}", val);
     }
 }
