@@ -4,11 +4,19 @@ use std::str::FromStr;
 
 use ast::{BinaryOp, Expr, Ident, Key, Label, Stmt, Table, UnaryOp, Value, Variable};
 
+use lalrpop_util::ParseError;
 use toml::value::Datetime;
 
 grammar;
 
+extern {
+    /// TODO: Replace with proper error type.
+    type Error = &'static str;
+}
+
 /// Variable types
+
+Comma<T>: Vec<T> = <seq:(<T> ",")*> <last:T?> => seq.into_iter().chain(last).collect();
 
 Datetime: Datetime = {
     <date:r#"([0-9]+)-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])[Tt ]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9]|60)(\.[0-9]+)?(([Zz])?|([\+|\-]([01][0-9]|2[0-3]):[0-5][0-9]))"#>
@@ -47,38 +55,40 @@ Key: Key = {
     <String> => Key::String(<>),
 };
 
-Table: Table = {
-    "{" <fields:(<Key> "=" <Expr> ",")*> <last:(<Key> "=" <Expr>)?> "}" => {
-        let mut fields = fields;
-        if let Some(last) = last {
-            fields.push(last);
-        }
-        Table { fields }
-    }
-};
-
 /// Expression types
 
 pub Expr: Expr = <ExprPipe> => <>;
 
 ExprPipe: Expr = {
     <l:ExprPipe> "|" <r:ExprComma> => Expr::Binary(BinaryOp::Pipe, Box::new(l), Box::new(r)),
-    <ExprComma> => <>,
+    ExprComma,
 };
 
 ExprComma: Expr = {
-    <exprs:(<ExprEq> ",")+> <e:ExprEq> => {
+    <exprs:(<ExprAssign> ",")+> <e:ExprAssign> => {
         let mut exprs = exprs;
         exprs.push(e);
         Expr::Comma(exprs)
     },
-    <ExprEq> => <>,
+    ExprAssign,
+};
+
+ExprAssign: Expr = {
+    <l:ExprAssign> "=" <r:ExprEq> => Expr::Assign(Box::new(l), Box::new(r)),
+    <l:ExprAssign> "+=" <r:ExprEq> => Expr::AssignOp(BinaryOp::Add, Box::new(l), Box::new(r)),
+    <l:ExprAssign> "-=" <r:ExprEq> => Expr::AssignOp(BinaryOp::Sub, Box::new(l), Box::new(r)),
+    <l:ExprAssign> "*=" <r:ExprEq> => Expr::AssignOp(BinaryOp::Mul, Box::new(l), Box::new(r)),
+    <l:ExprAssign> "/=" <r:ExprEq> => Expr::AssignOp(BinaryOp::Div, Box::new(l), Box::new(r)),
+    <l:ExprAssign> "%=" <r:ExprEq> => Expr::AssignOp(BinaryOp::Mod, Box::new(l), Box::new(r)),
+    <l:ExprAssign> "//=" <r:ExprEq> => Expr::AssignOp(BinaryOp::Alt, Box::new(l), Box::new(r)),
+    <l:ExprAssign> "|=" <r:ExprEq> => Expr::AssignOp(BinaryOp::Pipe, Box::new(l), Box::new(r)),
+    ExprEq,
 };
 
 ExprEq: Expr = {
     <l:ExprEq> "==" <r:ExprCmp> => Expr::Binary(BinaryOp::Eq, Box::new(l), Box::new(r)),
     <l:ExprEq> "!=" <r:ExprCmp> => Expr::Binary(BinaryOp::NotEq, Box::new(l), Box::new(r)),
-    <ExprCmp> => <>,
+    ExprCmp,
 };
 
 ExprCmp: Expr = {
@@ -86,33 +96,33 @@ ExprCmp: Expr = {
     <l:ExprCmp> ">=" <r:ExprBool> => Expr::Binary(BinaryOp::LessThanEq, Box::new(l), Box::new(r)),
     <l:ExprCmp> "<" <r:ExprBool> => Expr::Binary(BinaryOp::GreaterThan, Box::new(l), Box::new(r)),
     <l:ExprCmp> "<=" <r:ExprBool> => Expr::Binary(BinaryOp::GreaterThanEq, Box::new(l), Box::new(r)),
-    <ExprBool> => <>,
+    ExprBool,
 };
 
 ExprBool: Expr = {
     <l:ExprBool> "and" <r:ExprAdd> => Expr::Binary(BinaryOp::And, Box::new(l), Box::new(r)),
     <l:ExprBool> "or" <r:ExprAdd> => Expr::Binary(BinaryOp::Or, Box::new(l), Box::new(r)),
     <l:ExprBool> "//" <r:ExprAdd> => Expr::Binary(BinaryOp::Alt, Box::new(l), Box::new(r)),
-    <ExprAdd> => <>,
+    ExprAdd,
 };
 
 ExprAdd: Expr = {
     <l:ExprAdd> "+" <r:ExprMul> => Expr::Binary(BinaryOp::Add, Box::new(l), Box::new(r)),
     <l:ExprAdd> "-" <r:ExprMul> => Expr::Binary(BinaryOp::Sub, Box::new(l), Box::new(r)),
-    <ExprMul> => <>,
+    ExprMul,
 };
 
 ExprMul: Expr = {
     <l:ExprMul> "*" <r:ExprUnary> => Expr::Binary(BinaryOp::Mul, Box::new(l), Box::new(r)),
     <l:ExprMul> "/" <r:ExprUnary> => Expr::Binary(BinaryOp::Div, Box::new(l), Box::new(r)),
     <l:ExprMul> "%" <r:ExprUnary> => Expr::Binary(BinaryOp::Mod, Box::new(l), Box::new(r)),
-    <ExprUnary> => <>,
+    ExprUnary,
 };
 
 ExprUnary: Expr = {
     "+" <ExprUnary> => Expr::Unary(UnaryOp::Pos, Box::new(<>)),
     "-" <ExprUnary> => Expr::Unary(UnaryOp::Pos, Box::new(<>)),
-    <ExprField> => <>,
+    ExprField,
 };
 
 ExprField: Expr = {
@@ -120,7 +130,7 @@ ExprField: Expr = {
     <e:ExprField> "." <f:Ident> => Expr::Field(Box::new(e), f),
     <e:ExprField> "[" <i:Expr?> "]" => Expr::Index(Box::new(e), i.map(Box::new)),
     <e:ExprField> "[" <l:Expr?> ":" <u:Expr?> "]" => Expr::Slice(l.map(Box::new), u.map(Box::new)),
-    <ExprPrimary> => <>,
+    ExprPrimary,
 };
 
 ExprPrimary: Expr = {
@@ -129,18 +139,12 @@ ExprPrimary: Expr = {
     "." => Expr::Identity,
     ".." => Expr::Recurse,
 
-    //<Ident> => Expr::Ident(<>),
+    <Ident> => Expr::Ident(<>),
     <Value> => Expr::Value(<>),
-    "[" <e:Expr> "]" => Expr::Array(Box::new(e)),
-    //<Table> => Expr::Table(<>),
+    "[" <Comma<ExprEq>> "]" => Expr::Array(<>),
+    "{" <fields:Comma<(<Key> "=" <ExprEq>)>> "}" => Expr::Table(Table { fields }),
     //<sym:Ident> => Expr::FnCall(sym, Vec::new()),
-    <sym:Ident> "(" <args:(<Expr> ";")*> <a:Expr?> ")" => {
-        let mut args = args;
-        if let Some(a) = a {
-            args.push(a);
-        }
-        Expr::FnCall(sym, args)
-    },
+    <sym:Ident> "(" <args:(<Expr> ";")*> <a:Expr?> ")" => Expr::FnCall(sym, args.into_iter().chain(a).collect()),
     <Variable> => Expr::Variable(<>),
 
     "label" <Label> => Expr::Label(<>),
@@ -148,16 +152,10 @@ ExprPrimary: Expr = {
 };
 
 Stmt: Stmt = {
-    "include" <String> => Stmt::IncludeMod(From::from(<>)),
+    "include" <path:String> => Stmt::IncludeMod(path.into()),
     "import" <path:String> <sym:("as" <Ident>)?> => Stmt::ImportMod(From::from(path), sym),
     "import" <path:String> <var:("as" <Variable>)> => Stmt::ImportToml(From::from(path), var),
     <Expr> => Stmt::Expr(<>),
 };
 
-pub Filter: Vec<Stmt> = <stmts:(<Stmt> ";")*> <s:Stmt?> => {
-    let mut stmts = stmts;
-    if let Some(s) = s {
-        stmts.push(s);
-    }
-    stmts
-};
+pub Filter: Vec<Stmt> = <stmts:(<Stmt> ";")*> <s:Stmt?> => stmts.into_iter().chain(s).collect();

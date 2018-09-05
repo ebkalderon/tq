@@ -115,7 +115,7 @@ pub enum Expr {
     /// `12`, `-4.0`, `false`, `"foo"`, `'bar'`
     Value(Value),
     /// `[1, 2, 3, 4]`, `[map(. + 1)]`
-    Array(Box<Expr>),
+    Array(Vec<Expr>),
     /// `thing = { foo = "bar", baz = 5 }`
     Table(Table),
     /// `map(. + 1)`
@@ -185,8 +185,22 @@ mod tests {
         let val = ::grammar::FilterParser::new().parse("import \"blah/thing\" as $blah; .").unwrap();
         println!("{:?}", val);
 
-        // let val = ::grammar::FilterParser::new().parse("import 'thing'; { blah = { thing = map(. + 1) } }").unwrap();
-        // println!("{:?}", val);
+        let val = ::grammar::FilterParser::new().parse("import 'thing'; { blah = { thing = map(. + 1) } }").unwrap();
+        println!("{:?}", val);
+
+        let val = ::grammar::FilterParser::new().parse("thing = 5 == 5").unwrap();
+        println!("{:?}", val);
+
+        let val = ::grammar::FilterParser::new().parse("{}").unwrap();
+        println!("{:?}", val);
+
+        let val = ::grammar::FilterParser::new().parse("[]").unwrap();
+        println!("{:?}", val);
+
+        let val = ::grammar::FilterParser::new().parse("{ thing = 1, blah = .package.thing }").unwrap();
+        println!("{:?}", val);
+        let val = ::grammar::FilterParser::new().parse("{ thing = 1, blah = .package.thing }").unwrap();
+        println!("{:?}", val);
 
         let val = ::grammar::FilterParser::new().parse("[1, 2, 3] | map(. + 1)").unwrap();
         println!("{:?}", val);
