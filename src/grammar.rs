@@ -1,7 +1,7 @@
 // auto-generated: "lalrpop 0.15.2"
-// sha256: 152c4525ab8a2d29402eabd0c7fc3a68ffb09d7c3bbd46f61a20cfa43aede42f
+// sha256: 84f194bc098fad4f735ad6c093bd833842703a4f1e83a4c937c7878b06f2a
 use std::str::FromStr;
-use ast::{BinaryOp, Expr, FromExpr, Ident, Key, Label, Stmt, Table, UnaryOp, Value, Variable};
+use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Slice, Stmt, UnaryOp, Value, Variable};
 use lalrpop_util::ParseError;
 use toml::value::Datetime;
 #[allow(unused_extern_crates)]
@@ -12,7 +12,7 @@ mod __parse__Expr {
     #![allow(non_snake_case, non_camel_case_types, unused_mut, unused_variables, unused_imports, unused_parens)]
 
     use std::str::FromStr;
-    use ast::{BinaryOp, Expr, FromExpr, Ident, Key, Label, Stmt, Table, UnaryOp, Value, Variable};
+    use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Slice, Stmt, UnaryOp, Value, Variable};
     use lalrpop_util::ParseError;
     use toml::value::Datetime;
     #[allow(unused_extern_crates)]
@@ -1585,16 +1585,68 @@ mod __parse__Expr {
                 __reduce76(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
             }
             77 => {
-                __reduce77(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
+                // ExprField = ExprField, "[", Expr, ":", Expr, "]" => ActionFn(147);
+                let __sym5 = __pop_Variant0(__symbols);
+                let __sym4 = __pop_Variant6(__symbols);
+                let __sym3 = __pop_Variant0(__symbols);
+                let __sym2 = __pop_Variant6(__symbols);
+                let __sym1 = __pop_Variant0(__symbols);
+                let __sym0 = __pop_Variant6(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym5.2.clone();
+                let __nt = match super::__action147::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                let __symbol = (__start, __Symbol::Variant6(__nt), __end);
+                (6, __symbol, 31)
             }
             78 => {
-                __reduce78(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
+                // ExprField = ExprField, "[", Expr, ":", "]" => ActionFn(148);
+                let __sym4 = __pop_Variant0(__symbols);
+                let __sym3 = __pop_Variant0(__symbols);
+                let __sym2 = __pop_Variant6(__symbols);
+                let __sym1 = __pop_Variant0(__symbols);
+                let __sym0 = __pop_Variant6(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym4.2.clone();
+                let __nt = match super::__action148::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                let __symbol = (__start, __Symbol::Variant6(__nt), __end);
+                (5, __symbol, 31)
             }
             79 => {
-                __reduce79(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
+                // ExprField = ExprField, "[", ":", Expr, "]" => ActionFn(149);
+                let __sym4 = __pop_Variant0(__symbols);
+                let __sym3 = __pop_Variant6(__symbols);
+                let __sym2 = __pop_Variant0(__symbols);
+                let __sym1 = __pop_Variant0(__symbols);
+                let __sym0 = __pop_Variant6(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym4.2.clone();
+                let __nt = match super::__action149::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                let __symbol = (__start, __Symbol::Variant6(__nt), __end);
+                (5, __symbol, 31)
             }
             80 => {
-                __reduce80(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
+                // ExprField = ExprField, "[", ":", "]" => ActionFn(150);
+                let __sym3 = __pop_Variant0(__symbols);
+                let __sym2 = __pop_Variant0(__symbols);
+                let __sym1 = __pop_Variant0(__symbols);
+                let __sym0 = __pop_Variant6(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym3.2.clone();
+                let __nt = match super::__action150::<>(input, __sym0, __sym1, __sym2, __sym3) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                let __symbol = (__start, __Symbol::Variant6(__nt), __end);
+                (4, __symbol, 31)
             }
             81 => {
                 __reduce81(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
@@ -3546,98 +3598,6 @@ mod __parse__Expr {
         let __symbol = (__start, __Symbol::Variant6(__nt), __end);
         (3, __symbol, 31)
     }
-    pub(crate) fn __reduce77<
-        'input,
-    >(
-        input: &'input str,
-        __action: i16,
-        __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<()>,
-    ) -> (usize, (usize,__Symbol<'input>,usize), usize)
-    {
-        // ExprField = ExprField, "[", Expr, ":", Expr, "]" => ActionFn(147);
-        let __sym5 = __pop_Variant0(__symbols);
-        let __sym4 = __pop_Variant6(__symbols);
-        let __sym3 = __pop_Variant0(__symbols);
-        let __sym2 = __pop_Variant6(__symbols);
-        let __sym1 = __pop_Variant0(__symbols);
-        let __sym0 = __pop_Variant6(__symbols);
-        let __start = __sym0.0.clone();
-        let __end = __sym5.2.clone();
-        let __nt = super::__action147::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
-        let __symbol = (__start, __Symbol::Variant6(__nt), __end);
-        (6, __symbol, 31)
-    }
-    pub(crate) fn __reduce78<
-        'input,
-    >(
-        input: &'input str,
-        __action: i16,
-        __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<()>,
-    ) -> (usize, (usize,__Symbol<'input>,usize), usize)
-    {
-        // ExprField = ExprField, "[", Expr, ":", "]" => ActionFn(148);
-        let __sym4 = __pop_Variant0(__symbols);
-        let __sym3 = __pop_Variant0(__symbols);
-        let __sym2 = __pop_Variant6(__symbols);
-        let __sym1 = __pop_Variant0(__symbols);
-        let __sym0 = __pop_Variant6(__symbols);
-        let __start = __sym0.0.clone();
-        let __end = __sym4.2.clone();
-        let __nt = super::__action148::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
-        let __symbol = (__start, __Symbol::Variant6(__nt), __end);
-        (5, __symbol, 31)
-    }
-    pub(crate) fn __reduce79<
-        'input,
-    >(
-        input: &'input str,
-        __action: i16,
-        __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<()>,
-    ) -> (usize, (usize,__Symbol<'input>,usize), usize)
-    {
-        // ExprField = ExprField, "[", ":", Expr, "]" => ActionFn(149);
-        let __sym4 = __pop_Variant0(__symbols);
-        let __sym3 = __pop_Variant6(__symbols);
-        let __sym2 = __pop_Variant0(__symbols);
-        let __sym1 = __pop_Variant0(__symbols);
-        let __sym0 = __pop_Variant6(__symbols);
-        let __start = __sym0.0.clone();
-        let __end = __sym4.2.clone();
-        let __nt = super::__action149::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
-        let __symbol = (__start, __Symbol::Variant6(__nt), __end);
-        (5, __symbol, 31)
-    }
-    pub(crate) fn __reduce80<
-        'input,
-    >(
-        input: &'input str,
-        __action: i16,
-        __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<()>,
-    ) -> (usize, (usize,__Symbol<'input>,usize), usize)
-    {
-        // ExprField = ExprField, "[", ":", "]" => ActionFn(150);
-        let __sym3 = __pop_Variant0(__symbols);
-        let __sym2 = __pop_Variant0(__symbols);
-        let __sym1 = __pop_Variant0(__symbols);
-        let __sym0 = __pop_Variant6(__symbols);
-        let __start = __sym0.0.clone();
-        let __end = __sym3.2.clone();
-        let __nt = super::__action150::<>(input, __sym0, __sym1, __sym2, __sym3);
-        let __symbol = (__start, __Symbol::Variant6(__nt), __end);
-        (4, __symbol, 31)
-    }
     pub(crate) fn __reduce81<
         'input,
     >(
@@ -4692,7 +4652,7 @@ mod __parse__Filter {
     #![allow(non_snake_case, non_camel_case_types, unused_mut, unused_variables, unused_imports, unused_parens)]
 
     use std::str::FromStr;
-    use ast::{BinaryOp, Expr, FromExpr, Ident, Key, Label, Stmt, Table, UnaryOp, Value, Variable};
+    use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Slice, Stmt, UnaryOp, Value, Variable};
     use lalrpop_util::ParseError;
     use toml::value::Datetime;
     #[allow(unused_extern_crates)]
@@ -6343,16 +6303,68 @@ mod __parse__Filter {
                 __reduce76(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
             }
             77 => {
-                __reduce77(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
+                // ExprField = ExprField, "[", Expr, ":", Expr, "]" => ActionFn(147);
+                let __sym5 = __pop_Variant0(__symbols);
+                let __sym4 = __pop_Variant6(__symbols);
+                let __sym3 = __pop_Variant0(__symbols);
+                let __sym2 = __pop_Variant6(__symbols);
+                let __sym1 = __pop_Variant0(__symbols);
+                let __sym0 = __pop_Variant6(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym5.2.clone();
+                let __nt = match super::__action147::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                let __symbol = (__start, __Symbol::Variant6(__nt), __end);
+                (6, __symbol, 31)
             }
             78 => {
-                __reduce78(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
+                // ExprField = ExprField, "[", Expr, ":", "]" => ActionFn(148);
+                let __sym4 = __pop_Variant0(__symbols);
+                let __sym3 = __pop_Variant0(__symbols);
+                let __sym2 = __pop_Variant6(__symbols);
+                let __sym1 = __pop_Variant0(__symbols);
+                let __sym0 = __pop_Variant6(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym4.2.clone();
+                let __nt = match super::__action148::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                let __symbol = (__start, __Symbol::Variant6(__nt), __end);
+                (5, __symbol, 31)
             }
             79 => {
-                __reduce79(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
+                // ExprField = ExprField, "[", ":", Expr, "]" => ActionFn(149);
+                let __sym4 = __pop_Variant0(__symbols);
+                let __sym3 = __pop_Variant6(__symbols);
+                let __sym2 = __pop_Variant0(__symbols);
+                let __sym1 = __pop_Variant0(__symbols);
+                let __sym0 = __pop_Variant6(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym4.2.clone();
+                let __nt = match super::__action149::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                let __symbol = (__start, __Symbol::Variant6(__nt), __end);
+                (5, __symbol, 31)
             }
             80 => {
-                __reduce80(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
+                // ExprField = ExprField, "[", ":", "]" => ActionFn(150);
+                let __sym3 = __pop_Variant0(__symbols);
+                let __sym2 = __pop_Variant0(__symbols);
+                let __sym1 = __pop_Variant0(__symbols);
+                let __sym0 = __pop_Variant6(__symbols);
+                let __start = __sym0.0.clone();
+                let __end = __sym3.2.clone();
+                let __nt = match super::__action150::<>(input, __sym0, __sym1, __sym2, __sym3) {
+                    Ok(v) => v,
+                    Err(e) => return Some(Err(e)),
+                };
+                let __symbol = (__start, __Symbol::Variant6(__nt), __end);
+                (4, __symbol, 31)
             }
             81 => {
                 __reduce81(input, __action, __lookahead_start, __states, __symbols, ::std::marker::PhantomData::<()>)
@@ -8304,98 +8316,6 @@ mod __parse__Filter {
         let __symbol = (__start, __Symbol::Variant6(__nt), __end);
         (3, __symbol, 31)
     }
-    pub(crate) fn __reduce77<
-        'input,
-    >(
-        input: &'input str,
-        __action: i16,
-        __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<()>,
-    ) -> (usize, (usize,__Symbol<'input>,usize), usize)
-    {
-        // ExprField = ExprField, "[", Expr, ":", Expr, "]" => ActionFn(147);
-        let __sym5 = __pop_Variant0(__symbols);
-        let __sym4 = __pop_Variant6(__symbols);
-        let __sym3 = __pop_Variant0(__symbols);
-        let __sym2 = __pop_Variant6(__symbols);
-        let __sym1 = __pop_Variant0(__symbols);
-        let __sym0 = __pop_Variant6(__symbols);
-        let __start = __sym0.0.clone();
-        let __end = __sym5.2.clone();
-        let __nt = super::__action147::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4, __sym5);
-        let __symbol = (__start, __Symbol::Variant6(__nt), __end);
-        (6, __symbol, 31)
-    }
-    pub(crate) fn __reduce78<
-        'input,
-    >(
-        input: &'input str,
-        __action: i16,
-        __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<()>,
-    ) -> (usize, (usize,__Symbol<'input>,usize), usize)
-    {
-        // ExprField = ExprField, "[", Expr, ":", "]" => ActionFn(148);
-        let __sym4 = __pop_Variant0(__symbols);
-        let __sym3 = __pop_Variant0(__symbols);
-        let __sym2 = __pop_Variant6(__symbols);
-        let __sym1 = __pop_Variant0(__symbols);
-        let __sym0 = __pop_Variant6(__symbols);
-        let __start = __sym0.0.clone();
-        let __end = __sym4.2.clone();
-        let __nt = super::__action148::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
-        let __symbol = (__start, __Symbol::Variant6(__nt), __end);
-        (5, __symbol, 31)
-    }
-    pub(crate) fn __reduce79<
-        'input,
-    >(
-        input: &'input str,
-        __action: i16,
-        __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<()>,
-    ) -> (usize, (usize,__Symbol<'input>,usize), usize)
-    {
-        // ExprField = ExprField, "[", ":", Expr, "]" => ActionFn(149);
-        let __sym4 = __pop_Variant0(__symbols);
-        let __sym3 = __pop_Variant6(__symbols);
-        let __sym2 = __pop_Variant0(__symbols);
-        let __sym1 = __pop_Variant0(__symbols);
-        let __sym0 = __pop_Variant6(__symbols);
-        let __start = __sym0.0.clone();
-        let __end = __sym4.2.clone();
-        let __nt = super::__action149::<>(input, __sym0, __sym1, __sym2, __sym3, __sym4);
-        let __symbol = (__start, __Symbol::Variant6(__nt), __end);
-        (5, __symbol, 31)
-    }
-    pub(crate) fn __reduce80<
-        'input,
-    >(
-        input: &'input str,
-        __action: i16,
-        __lookahead_start: Option<&usize>,
-        __states: &mut ::std::vec::Vec<i16>,
-        __symbols: &mut ::std::vec::Vec<(usize,__Symbol<'input>,usize)>,
-        _: ::std::marker::PhantomData<()>,
-    ) -> (usize, (usize,__Symbol<'input>,usize), usize)
-    {
-        // ExprField = ExprField, "[", ":", "]" => ActionFn(150);
-        let __sym3 = __pop_Variant0(__symbols);
-        let __sym2 = __pop_Variant0(__symbols);
-        let __sym1 = __pop_Variant0(__symbols);
-        let __sym0 = __pop_Variant6(__symbols);
-        let __start = __sym0.0.clone();
-        let __end = __sym3.2.clone();
-        let __nt = super::__action150::<>(input, __sym0, __sym1, __sym2, __sym3);
-        let __symbol = (__start, __Symbol::Variant6(__nt), __end);
-        (4, __symbol, 31)
-    }
     pub(crate) fn __reduce81<
         'input,
     >(
@@ -9448,7 +9368,7 @@ pub use self::__parse__Filter::FilterParser;
 mod __intern_token {
     #![allow(unused_imports)]
     use std::str::FromStr;
-    use ast::{BinaryOp, Expr, FromExpr, Ident, Key, Label, Stmt, Table, UnaryOp, Value, Variable};
+    use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Slice, Stmt, UnaryOp, Value, Variable};
     use lalrpop_util::ParseError;
     use toml::value::Datetime;
     #[allow(unused_extern_crates)]
@@ -10371,7 +10291,12 @@ fn __action60<
     (_, _, _): (usize, &'input str, usize),
 ) -> Expr
 {
-    Expr::Index(Box::new(e), i.map(Box::new))
+    {
+        match i {
+            Some(i) => Expr::Index(Box::new(e), Box::new(Index::Exact(i))),
+            None => Expr::Index(Box::new(e), Box::new(Index::Iterate)),
+        }
+    }
 }
 
 #[allow(unused_variables)]
@@ -10385,9 +10310,18 @@ fn __action61<
     (_, _, _): (usize, &'input str, usize),
     (_, u, _): (usize, ::std::option::Option<Expr>, usize),
     (_, _, _): (usize, &'input str, usize),
-) -> Expr
+) -> Result<Expr,__lalrpop_util::ParseError<usize,Token<'input>,&'static str>>
 {
-    Expr::Slice(l.map(Box::new), u.map(Box::new))
+    {
+        let slice = match (l, u) {
+            (Some(l), Some(u)) => Slice::Exact(l, u),
+            (Some(l), None) => Slice::Lower(l),
+            (None, Some(u)) => Slice::Upper(u),
+            (None, None) => return Err(ParseError::User { error: "Cannot omit both terms in slice. Use `[]` instead." }),
+        };
+
+        Ok(Expr::Index(Box::new(e), Box::new(Index::Slice(slice))))
+    }
 }
 
 #[allow(unused_variables)]
@@ -10477,11 +10411,11 @@ fn __action69<
 >(
     input: &'input str,
     (_, _, _): (usize, &'input str, usize),
-    (_, fields, _): (usize, Vec<(Key, Expr)>, usize),
+    (_, __0, _): (usize, Vec<(Key, Expr)>, usize),
     (_, _, _): (usize, &'input str, usize),
 ) -> Expr
 {
-    Expr::Table(Table { fields })
+    Expr::Table(__0)
 }
 
 #[allow(unused_variables)]
@@ -11799,7 +11733,7 @@ fn __action147<
     __3: (usize, &'input str, usize),
     __4: (usize, Expr, usize),
     __5: (usize, &'input str, usize),
-) -> Expr
+) -> Result<Expr,__lalrpop_util::ParseError<usize,Token<'input>,&'static str>>
 {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
@@ -11836,7 +11770,7 @@ fn __action148<
     __2: (usize, Expr, usize),
     __3: (usize, &'input str, usize),
     __4: (usize, &'input str, usize),
-) -> Expr
+) -> Result<Expr,__lalrpop_util::ParseError<usize,Token<'input>,&'static str>>
 {
     let __start0 = __2.0.clone();
     let __end0 = __2.2.clone();
@@ -11874,7 +11808,7 @@ fn __action149<
     __2: (usize, &'input str, usize),
     __3: (usize, Expr, usize),
     __4: (usize, &'input str, usize),
-) -> Expr
+) -> Result<Expr,__lalrpop_util::ParseError<usize,Token<'input>,&'static str>>
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();
@@ -11911,7 +11845,7 @@ fn __action150<
     __1: (usize, &'input str, usize),
     __2: (usize, &'input str, usize),
     __3: (usize, &'input str, usize),
-) -> Expr
+) -> Result<Expr,__lalrpop_util::ParseError<usize,Token<'input>,&'static str>>
 {
     let __start0 = __1.2.clone();
     let __end0 = __2.0.clone();

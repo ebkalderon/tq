@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use ast::{BinaryOp, Expr, Ident, Key, Label, Stmt, Table, UnaryOp, Value, Variable};
+use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Slice, Stmt, UnaryOp, Value, Variable};
 
 use lalrpop_util::ParseError;
 use toml::value::Datetime;
@@ -128,8 +128,22 @@ ExprUnary: Expr = {
 ExprField: Expr = {
     "." <f:Ident> => Expr::Field(Box::new(Expr::Identity), f),
     <e:ExprField> "." <f:Ident> => Expr::Field(Box::new(e), f),
-    <e:ExprField> "[" <i:Expr?> "]" => Expr::Index(Box::new(e), i.map(Box::new)),
-    <e:ExprField> "[" <l:Expr?> ":" <u:Expr?> "]" => Expr::Slice(l.map(Box::new), u.map(Box::new)),
+    <e:ExprField> "[" <i:Expr?> "]" => {
+        match i {
+            Some(i) => Expr::Index(Box::new(e), Box::new(Index::Exact(i))),
+            None => Expr::Index(Box::new(e), Box::new(Index::Iterate)),
+        }
+    },
+    <e:ExprField> "[" <l:Expr?> ":" <u:Expr?> "]" =>? {
+        let slice = match (l, u) {
+            (Some(l), Some(u)) => Slice::Exact(l, u),
+            (Some(l), None) => Slice::Lower(l),
+            (None, Some(u)) => Slice::Upper(u),
+            (None, None) => return Err(ParseError::User { error: "Cannot omit both terms in slice. Use `[]` instead." }),
+        };
+
+        Ok(Expr::Index(Box::new(e), Box::new(Index::Slice(slice))))
+    },
     ExprPrimary,
 };
 
@@ -142,7 +156,7 @@ ExprPrimary: Expr = {
     <Ident> => Expr::Ident(<>),
     <Value> => Expr::Value(<>),
     "[" <Comma<ExprEq>> "]" => Expr::Array(<>),
-    "{" <fields:Comma<(<Key> "=" <ExprEq>)>> "}" => Expr::Table(Table { fields }),
+    "{" <Comma<(<Key> "=" <ExprEq>)>> "}" => Expr::Table(<>),
     //<sym:Ident> => Expr::FnCall(sym, Vec::new()),
     <sym:Ident> "(" <args:(<Expr> ";")*> <a:Expr?> ")" => Expr::FnCall(sym, args.into_iter().chain(a).collect()),
     <Variable> => Expr::Variable(<>),

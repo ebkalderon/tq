@@ -1,6 +1,5 @@
 #![forbid(unsafe_code)]
 
-extern crate tq;
 extern crate env_logger;
 #[macro_use]
 extern crate failure;
@@ -9,6 +8,7 @@ extern crate log;
 #[macro_use]
 extern crate structopt;
 extern crate toml;
+extern crate tq;
 
 use std::fs;
 use std::path::PathBuf;
@@ -18,6 +18,7 @@ use failure::ResultExt;
 use log::LevelFilter;
 use structopt::StructOpt;
 use toml::Value;
+use tq::FilterParser;
 
 #[derive(Debug, Fail)]
 pub enum Error {
@@ -68,6 +69,9 @@ fn main() {
             lines
         }
     };
+
+    let filter = FilterParser::new().parse(&opt.filter).unwrap();
+    println!("{:?}", filter);
 
     // compile
     //

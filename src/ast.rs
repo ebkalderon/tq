@@ -18,11 +18,6 @@ pub enum Key {
 }
 
 #[derive(Debug)]
-pub struct Table {
-    pub fields: Vec<(Key, Expr)>,
-}
-
-#[derive(Debug)]
 pub enum UnaryOp {
     /// The unary `+` operator.
     Pos,
@@ -104,6 +99,20 @@ pub enum FnArg {
 }
 
 #[derive(Debug)]
+pub enum Slice {
+    Lower(Expr),
+    Upper(Expr),
+    Exact(Expr, Expr),
+}
+
+#[derive(Debug)]
+pub enum Index {
+    Exact(Expr),
+    Slice(Slice),
+    Iterate,
+}
+
+#[derive(Debug)]
 pub enum Expr {
     /// `.`
     Identity,
@@ -117,7 +126,7 @@ pub enum Expr {
     /// `[1, 2, 3, 4]`, `[map(. + 1)]`
     Array(Vec<Expr>),
     /// `thing = { foo = "bar", baz = 5 }`
-    Table(Table),
+    Table(Vec<(Key, Expr)>),
     /// `map(. + 1)`
     FnCall(Ident, Vec<Expr>),
     /// `$bar`
@@ -137,9 +146,7 @@ pub enum Expr {
     /// `.package`, `.dependencies.log`
     Field(Box<Expr>, Ident),
     /// `.package.authors[]`, `.package.authors[1]`, `.package.authors[2:5]`
-    Index(Box<Expr>, Option<Box<Expr>>),
-    /// `6:`, `:5`, `4:7`
-    Slice(Option<Box<Expr>>, Option<Box<Expr>>),
+    Index(Box<Expr>, Box<Index>),
     /// `.package as $pkg`
     /// `.package as { name = $name, authors = $authors }`
     Binding(Box<Expr>, Box<Expr>),
@@ -197,8 +204,6 @@ mod tests {
         let val = ::grammar::FilterParser::new().parse("[]").unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse("{ thing = 1, blah = .package.thing }").unwrap();
-        println!("{:?}", val);
         let val = ::grammar::FilterParser::new().parse("{ thing = 1, blah = .package.thing }").unwrap();
         println!("{:?}", val);
 
