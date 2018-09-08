@@ -46,7 +46,7 @@ Value: Value = {
     "null" => Value::Null,
 };
 
-Ident: Ident = <r"[_\-a-zA-Z]+[_\-a-zA-Z0-9]*"> => Ident(<>.to_owned());
+Ident: Ident = <r"[_a-zA-Z]+[_\-a-zA-Z0-9]*"> => Ident(<>.to_owned());
 Label: Label = "$" <Ident> => Label(<>);
 Variable: Variable = "$" <Ident> => Variable(<>);
 
@@ -55,10 +55,10 @@ Key: Key = {
     <String> => Key::String(<>),
 };
 
-// Pattern: Pattern = {
-//     <Variable> => Pattern::Variable(<>),
-//     "{" <fields:Comma<(<Key> "=" <Variable>)>> "}" => Pattern::Table(fields),
-// };
+Pattern: Pattern = {
+    <Variable> => Pattern::Variable(<>),
+    "{" <fields:Comma<(<Key> "=" <Variable>)>> "}" => Pattern::Table(fields),
+};
 
 /// Expression types
 
@@ -70,11 +70,16 @@ ExprPipe: Expr = {
 };
 
 ExprComma: Expr = {
-    <exprs:(<ExprAssign> ",")+> <e:ExprAssign> => {
+    <exprs:(<ExprBinding> ",")+> <e:ExprBinding> => {
         let mut exprs = exprs;
         exprs.push(e);
         Expr::Comma(exprs)
     },
+    ExprBinding,
+};
+
+ExprBinding: Expr = {
+    <e:ExprBinding> "as" <pat:Pattern> => Expr::Binding(Box::new(e), pat),
     ExprAssign,
 };
 
@@ -165,8 +170,6 @@ ExprPrimary: Expr = {
     <sym:Ident> => Expr::FnCall(sym, Vec::new()),
     <sym:Ident> "(" <args:(<Expr> ";")*> <a:Expr?> ")" => Expr::FnCall(sym, args.into_iter().chain(a).collect()),
     <Variable> => Expr::Variable(<>),
-
-    // <expr:Expr> "as" <pat:Pattern> => Expr::Binding(Box::new(expr), pat),
 
     "label" <Label> => Expr::Label(<>),
     "break" <Label> => Expr::Break(<>),

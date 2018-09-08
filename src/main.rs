@@ -71,7 +71,7 @@ fn main() {
     };
 
     let filter = FilterParser::new().parse(&opt.filter).unwrap();
-    println!("{:?}", filter);
+    println!("{:#?}", filter);
 
     // compile
     //
