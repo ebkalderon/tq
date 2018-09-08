@@ -57,7 +57,8 @@ Key: Key = {
 
 Pattern: Pattern = {
     <Variable> => Pattern::Variable(<>),
-    "{" <fields:Comma<(<Key> "=" <Variable>)>> "}" => Pattern::Table(fields),
+    "[" <pat:Comma<Pattern>> "]" => Pattern::Array(pat),
+    "{" <fields:Comma<(<Key> "=" <Pattern>)>> "}" => Pattern::Table(fields),
 };
 
 /// Expression types
@@ -66,20 +67,19 @@ pub Expr: Expr = <ExprPipe> => <>;
 
 ExprPipe: Expr = {
     <l:ExprPipe> "|" <r:ExprComma> => Expr::Binary(BinaryOp::Pipe, Box::new(l), Box::new(r)),
+    <l:ExprPipe> "as" <pat:Pattern> "|" <r:ExprComma> => {
+        let binding = Expr::Binding(Box::new(l), pat);
+        Expr::Binary(BinaryOp::Pipe, Box::new(binding), Box::new(r))
+    },
     ExprComma,
 };
 
 ExprComma: Expr = {
-    <exprs:(<ExprBinding> ",")+> <e:ExprBinding> => {
+    <exprs:(<ExprAssign> ",")+> <e:ExprAssign> => {
         let mut exprs = exprs;
         exprs.push(e);
         Expr::Comma(exprs)
     },
-    ExprBinding,
-};
-
-ExprBinding: Expr = {
-    <e:ExprBinding> "as" <pat:Pattern> => Expr::Binding(Box::new(e), pat),
     ExprAssign,
 };
 

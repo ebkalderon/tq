@@ -115,7 +115,8 @@ pub enum Index {
 #[derive(Debug)]
 pub enum Pattern {
     Variable(Variable),
-    Table(Vec<(Key, Variable)>),
+    Array(Vec<Pattern>),
+    Table(Vec<(Key, Pattern)>),
 }
 
 #[derive(Debug)]
