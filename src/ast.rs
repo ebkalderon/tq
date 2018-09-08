@@ -171,7 +171,7 @@ pub enum Expr {
         counter: Pattern,
         init: Box<Expr>,
         update: Box<Expr>,
-        extract: Box<Expr>,
+        extract: Option<Box<Expr>>,
     },
     /// `.package.name?`, `try .package.name`, `try .package.name catch 'nonexistent'`
     Try(Box<Expr>, Option<Box<Expr>>),
