@@ -89,27 +89,33 @@ pub struct ForEach {
 #[derive(Debug)]
 pub struct FnDecl {
     pub name: Ident,
-    pub args: Vec<FnArg>,
+    pub params: Vec<Parameter>,
 }
 
 #[derive(Debug)]
-pub enum FnArg {
+pub enum Parameter {
     Ident(Ident),
     Variable(Variable),
 }
 
 #[derive(Debug)]
 pub enum Slice {
-    Lower(Expr),
-    Upper(Expr),
-    Exact(Expr, Expr),
+    Lower(Box<Expr>),
+    Upper(Box<Expr>),
+    Exact(Box<Expr>, Box<Expr>),
 }
 
 #[derive(Debug)]
 pub enum Index {
-    Exact(Expr),
+    Exact(Box<Expr>),
     Slice(Slice),
     Iterate,
+}
+
+#[derive(Debug)]
+pub enum Pattern {
+    Variable(Variable),
+    Table(Vec<(Key, Variable)>),
 }
 
 #[derive(Debug)]
@@ -119,8 +125,6 @@ pub enum Expr {
     /// `..`
     Recurse,
 
-    /// `hello`
-    Ident(Ident),
     /// `12`, `-4.0`, `false`, `"foo"`, `'bar'`
     Value(Value),
     /// `[1, 2, 3, 4]`, `[map(. + 1)]`
@@ -146,10 +150,10 @@ pub enum Expr {
     /// `.package`, `.dependencies.log`
     Field(Box<Expr>, Ident),
     /// `.package.authors[]`, `.package.authors[1]`, `.package.authors[2:5]`
-    Index(Box<Expr>, Box<Index>),
+    Index(Box<Expr>, Index),
     /// `.package as $pkg`
     /// `.package as { name = $name, authors = $authors }`
-    Binding(Box<Expr>, Box<Expr>),
+    Binding(Box<Expr>, Pattern),
 
     /// `label $foo`
     Label(Label),
@@ -161,7 +165,13 @@ pub enum Expr {
     /// `reduce EXPR as $var (ACC; EVAL)`
     Reduce(Box<Reduce>),
     /// `foreach EXPR as $var (INIT; UPDATE; EXTRACT)`
-    ForEach(Box<ForEach>),
+    For {
+        cond: Box<Expr>,
+        counter: Pattern,
+        init: Box<Expr>,
+        update: Box<Expr>,
+        extract: Box<Expr>,
+    },
     /// `.package.name?`, `try .package.name`, `try .package.name catch 'nonexistent'`
     Try(Box<Expr>, Option<Box<Expr>>),
 
@@ -202,6 +212,9 @@ mod tests {
         println!("{:?}", val);
 
         let val = ::grammar::FilterParser::new().parse("[]").unwrap();
+        println!("{:?}", val);
+
+        let val = ::grammar::FilterParser::new().parse(".foo?").unwrap();
         println!("{:?}", val);
 
         let val = ::grammar::FilterParser::new().parse("{ thing = 1, blah = .package.thing }").unwrap();

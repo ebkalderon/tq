@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Slice, Stmt, UnaryOp, Value, Variable};
+use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Pattern, Slice, Stmt, UnaryOp, Value, Variable};
 
 use lalrpop_util::ParseError;
 use toml::value::Datetime;
@@ -54,6 +54,11 @@ Key: Key = {
     <Ident> => Key::Ident(<>),
     <String> => Key::String(<>),
 };
+
+// Pattern: Pattern = {
+//     <Variable> => Pattern::Variable(<>),
+//     "{" <fields:Comma<(<Key> "=" <Variable>)>> "}" => Pattern::Table(fields),
+// };
 
 /// Expression types
 
@@ -130,20 +135,21 @@ ExprField: Expr = {
     <e:ExprField> "." <f:Ident> => Expr::Field(Box::new(e), f),
     <e:ExprField> "[" <i:Expr?> "]" => {
         match i {
-            Some(i) => Expr::Index(Box::new(e), Box::new(Index::Exact(i))),
-            None => Expr::Index(Box::new(e), Box::new(Index::Iterate)),
+            Some(i) => Expr::Index(Box::new(e), Index::Exact(Box::new(i))),
+            None => Expr::Index(Box::new(e), Index::Iterate),
         }
     },
     <e:ExprField> "[" <l:Expr?> ":" <u:Expr?> "]" =>? {
         let slice = match (l, u) {
-            (Some(l), Some(u)) => Slice::Exact(l, u),
-            (Some(l), None) => Slice::Lower(l),
-            (None, Some(u)) => Slice::Upper(u),
+            (Some(l), Some(u)) => Slice::Exact(Box::new(l), Box::new(u)),
+            (Some(l), None) => Slice::Lower(Box::new(l)),
+            (None, Some(u)) => Slice::Upper(Box::new(u)),
             (None, None) => return Err(ParseError::User { error: "Cannot omit both terms in slice. Use `[]` instead." }),
         };
 
-        Ok(Expr::Index(Box::new(e), Box::new(Index::Slice(slice))))
+        Ok(Expr::Index(Box::new(e), Index::Slice(slice)))
     },
+    <e:ExprField> "?" => Expr::Try(Box::new(e), None),
     ExprPrimary,
 };
 
@@ -153,13 +159,14 @@ ExprPrimary: Expr = {
     "." => Expr::Identity,
     ".." => Expr::Recurse,
 
-    <Ident> => Expr::Ident(<>),
     <Value> => Expr::Value(<>),
     "[" <Comma<ExprEq>> "]" => Expr::Array(<>),
     "{" <Comma<(<Key> "=" <ExprEq>)>> "}" => Expr::Table(<>),
-    //<sym:Ident> => Expr::FnCall(sym, Vec::new()),
+    <sym:Ident> => Expr::FnCall(sym, Vec::new()),
     <sym:Ident> "(" <args:(<Expr> ";")*> <a:Expr?> ")" => Expr::FnCall(sym, args.into_iter().chain(a).collect()),
     <Variable> => Expr::Variable(<>),
+
+    // <expr:Expr> "as" <pat:Pattern> => Expr::Binding(Box::new(expr), pat),
 
     "label" <Label> => Expr::Label(<>),
     "break" <Label> => Expr::Break(<>),
@@ -168,7 +175,7 @@ ExprPrimary: Expr = {
 Stmt: Stmt = {
     "include" <path:String> => Stmt::IncludeMod(path.into()),
     "import" <path:String> <sym:("as" <Ident>)?> => Stmt::ImportMod(From::from(path), sym),
-    "import" <path:String> <var:("as" <Variable>)> => Stmt::ImportToml(From::from(path), var),
+    "import" <path:String> "as" <var:Variable> => Stmt::ImportToml(From::from(path), var),
     <Expr> => Stmt::Expr(<>),
 };
 
