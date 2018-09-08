@@ -20,11 +20,11 @@ Comma<T>: Vec<T> = <seq:(<T> ",")*> <last:T?> => seq.into_iter().chain(last).col
 
 Datetime: Datetime = {
     <date:r#"([0-9]+)-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])[Tt ]([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9]|60)(\.[0-9]+)?(([Zz])?|([\+|\-]([01][0-9]|2[0-3]):[0-5][0-9]))"#>
-    => Datetime::from_str(date).unwrap(),
+        => Datetime::from_str(date).unwrap(),
     <date:r#"([0-9]+)-(0[1-9]|1[012])-(0[1-9]|[12][0-9]|3[01])"#>
-    => Datetime::from_str(date).unwrap(),
+        => Datetime::from_str(date).unwrap(),
     <date:r#"([01][0-9]|2[0-3]):([0-5][0-9]):([0-5][0-9]|60)(\.[0-9]+)?([\+|\-]([01][0-9]|2[0-3]):[0-5][0-9])?"#>
-    => Datetime::from_str(date).unwrap(),
+        => Datetime::from_str(date).unwrap(),
 };
 
 Float: f64 = <num:r"[0-9]+\.[0-9]+"> => f64::from_str(num).unwrap();
@@ -149,7 +149,9 @@ ExprField: Expr = {
             (Some(l), Some(u)) => Slice::Exact(Box::new(l), Box::new(u)),
             (Some(l), None) => Slice::Lower(Box::new(l)),
             (None, Some(u)) => Slice::Upper(Box::new(u)),
-            (None, None) => return Err(ParseError::User { error: "Cannot omit both terms in slice. Use `[]` instead." }),
+            (None, None) => return Err(ParseError::User {
+                error: "Cannot omit both terms in slice. Use `[]` instead."
+            }),
         };
 
         Ok(Expr::Index(Box::new(e), Index::Slice(slice)))
@@ -168,7 +170,9 @@ ExprPrimary: Expr = {
     "[" <Comma<ExprEq>> "]" => Expr::Array(<>),
     "{" <Comma<(<Key> "=" <ExprEq>)>> "}" => Expr::Table(<>),
     <sym:Ident> => Expr::FnCall(sym, Vec::new()),
-    <sym:Ident> "(" <args:(<Expr> ";")*> <a:Expr?> ")" => Expr::FnCall(sym, args.into_iter().chain(a).collect()),
+    <sym:Ident> "(" <args:(<Expr> ";")*> <a:Expr> ")" => {
+        Expr::FnCall(sym, args.into_iter().chain(Some(a)).collect())
+    },
     <Variable> => Expr::Variable(<>),
 
     "label" <Label> => Expr::Label(<>),

@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 
-extern crate toml;
 extern crate lalrpop_util;
+extern crate toml;
 
 /// NOTE: For interactive testing in `main`.
 pub use grammar::FilterParser;

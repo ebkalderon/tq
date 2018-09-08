@@ -200,13 +200,19 @@ mod tests {
 
     #[test]
     fn simple_ast() {
-        let val = ::grammar::FilterParser::new().parse("import \"blah/thing\" as $blah; .").unwrap();
+        let val = ::grammar::FilterParser::new()
+            .parse("import \"blah/thing\" as $blah; .")
+            .unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse("import 'thing'; { blah = { thing = map(. + 1) } }").unwrap();
+        let val = ::grammar::FilterParser::new()
+            .parse("import 'thing'; { blah = { thing = map(. + 1) } }")
+            .unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse("thing = 5 == 5").unwrap();
+        let val = ::grammar::FilterParser::new()
+            .parse("thing = 5 == 5")
+            .unwrap();
         println!("{:?}", val);
 
         let val = ::grammar::FilterParser::new().parse("{}").unwrap();
@@ -218,13 +224,19 @@ mod tests {
         let val = ::grammar::FilterParser::new().parse(".foo?").unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse("{ thing = 1, blah = .package.thing }").unwrap();
+        let val = ::grammar::FilterParser::new()
+            .parse("{ thing = 1, blah = .package.thing }")
+            .unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse("[1, 2, 3] | map(. + 1)").unwrap();
+        let val = ::grammar::FilterParser::new()
+            .parse("[1, 2, 3] | map(. + 1)")
+            .unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse(".package[], .dependencies[] | . + 1").unwrap();
+        let val = ::grammar::FilterParser::new()
+            .parse(".package[], .dependencies[] | . + 1")
+            .unwrap();
         println!("{:?}", val);
 
         let val = ::grammar::FilterParser::new().parse(".name.thing").unwrap();
