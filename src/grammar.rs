@@ -1,5 +1,5 @@
 // auto-generated: "lalrpop 0.15.2"
-// sha256: e3385565036c2915b2d6827f9746028ab155b3fced5aa49ae5c13311a4e23
+// sha256: 19cdb822df5a33ee94cbc8f9119d0a98a65c058f64babe5981be87eb23f27
 use std::str::FromStr;
 use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Pattern, Slice, Stmt, UnaryOp, Value, Variable};
 use lalrpop_util::ParseError;
@@ -11932,7 +11932,7 @@ fn __action60<
     (_, __0, _): (usize, Expr, usize),
 ) -> Expr
 {
-    Expr::Unary(UnaryOp::Pos, Box::new(__0))
+    Expr::Unary(UnaryOp::Neg, Box::new(__0))
 }
 
 #[allow(unused_variables)]

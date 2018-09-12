@@ -131,7 +131,7 @@ ExprMul: Expr = {
 
 ExprUnary: Expr = {
     "+" <ExprUnary> => Expr::Unary(UnaryOp::Pos, Box::new(<>)),
-    "-" <ExprUnary> => Expr::Unary(UnaryOp::Pos, Box::new(<>)),
+    "-" <ExprUnary> => Expr::Unary(UnaryOp::Neg, Box::new(<>)),
     ExprField,
 };
 
