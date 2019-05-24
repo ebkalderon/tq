@@ -1,7 +1,7 @@
 // auto-generated: "lalrpop 0.15.2"
 // sha256: 19cdb822df5a33ee94cbc8f9119d0a98a65c058f64babe5981be87eb23f27
 use std::str::FromStr;
-use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Pattern, Slice, Stmt, UnaryOp, Value, Variable};
+use crate::ast::{BinaryOp, Expr, Ident, Index, Key, Label, Pattern, Slice, Stmt, UnaryOp, Value, Variable};
 use lalrpop_util::ParseError;
 use toml::value::Datetime;
 #[allow(unused_extern_crates)]
@@ -12,7 +12,7 @@ mod __parse__Expr {
     #![allow(non_snake_case, non_camel_case_types, unused_mut, unused_variables, unused_imports, unused_parens)]
 
     use std::str::FromStr;
-    use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Pattern, Slice, Stmt, UnaryOp, Value, Variable};
+    use crate::ast::{BinaryOp, Expr, Ident, Index, Key, Label, Pattern, Slice, Stmt, UnaryOp, Value, Variable};
     use lalrpop_util::ParseError;
     use toml::value::Datetime;
     #[allow(unused_extern_crates)]
@@ -5469,7 +5469,7 @@ mod __parse__Filter {
     #![allow(non_snake_case, non_camel_case_types, unused_mut, unused_variables, unused_imports, unused_parens)]
 
     use std::str::FromStr;
-    use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Pattern, Slice, Stmt, UnaryOp, Value, Variable};
+    use crate::ast::{BinaryOp, Expr, Ident, Index, Key, Label, Pattern, Slice, Stmt, UnaryOp, Value, Variable};
     use lalrpop_util::ParseError;
     use toml::value::Datetime;
     #[allow(unused_extern_crates)]
@@ -11002,7 +11002,7 @@ pub use self::__parse__Filter::FilterParser;
 mod __intern_token {
     #![allow(unused_imports)]
     use std::str::FromStr;
-    use ast::{BinaryOp, Expr, Ident, Index, Key, Label, Pattern, Slice, Stmt, UnaryOp, Value, Variable};
+    use crate::ast::{BinaryOp, Expr, Ident, Index, Key, Label, Pattern, Slice, Stmt, UnaryOp, Value, Variable};
     use lalrpop_util::ParseError;
     use toml::value::Datetime;
     #[allow(unused_extern_crates)]
@@ -11159,7 +11159,7 @@ mod __intern_token {
         type Item = Result<(usize, Token<'input>, usize), __lalrpop_util::ParseError<usize,Token<'input>,&'static str>>;
 
         fn next(&mut self) -> Option<Self::Item> {
-            let __text = self.text.trim_left();
+            let __text = self.text.trim_start();
             let __whitespace = self.text.len() - __text.len();
             let __start_offset = self.consumed + __whitespace;
             if __text.is_empty() {

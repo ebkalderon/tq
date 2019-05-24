@@ -2,22 +2,22 @@ use std::path::PathBuf;
 
 use toml::value::Datetime;
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct Ident(pub String);
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct Label(pub Ident);
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct Variable(pub Ident);
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum Key {
     Ident(Ident),
     String(String),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum UnaryOp {
     /// The unary `+` operator.
     Pos,
@@ -25,7 +25,7 @@ pub enum UnaryOp {
     Neg,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum BinaryOp {
     /// The binary `+` operator.
     Add,
@@ -59,7 +59,7 @@ pub enum BinaryOp {
     Alt,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Value {
     String(String),
     Integer(i64),
@@ -69,7 +69,7 @@ pub enum Value {
     Null,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Reduce {
     pub expr: Expr,
     pub var: Variable,
@@ -77,7 +77,7 @@ pub struct Reduce {
     pub eval: Expr,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct ForEach {
     pub expr: Expr,
     pub var: Variable,
@@ -86,40 +86,40 @@ pub struct ForEach {
     pub extract: Expr,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub struct FnDecl {
     pub name: Ident,
     pub params: Vec<Parameter>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, Hash, PartialEq)]
 pub enum Parameter {
     Ident(Ident),
     Variable(Variable),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Slice {
     Lower(Box<Expr>),
     Upper(Box<Expr>),
     Exact(Box<Expr>, Box<Expr>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Index {
     Exact(Box<Expr>),
     Slice(Slice),
     Iterate,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Pattern {
     Variable(Variable),
     Array(Vec<Pattern>),
     Table(Vec<(Key, Pattern)>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Expr {
     /// `.`
     Identity,
@@ -182,7 +182,7 @@ pub enum Expr {
     Fn(FnDecl, Vec<Stmt>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Stmt {
     /// `include "foo/bar";`
     IncludeMod(PathBuf),
@@ -196,50 +196,51 @@ pub enum Stmt {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
 
     #[test]
     fn simple_ast() {
-        let val = ::grammar::FilterParser::new()
+        let val = crate::grammar::FilterParser::new()
             .parse("import \"blah/thing\" as $blah; .")
             .unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new()
+        let val = crate::grammar::FilterParser::new()
             .parse("import 'thing'; { blah = { thing = map(. + 1) } }")
             .unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new()
+        let val = crate::grammar::FilterParser::new()
             .parse("thing = 5 == 5")
             .unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse("{}").unwrap();
+        let val = crate::grammar::FilterParser::new().parse("{}").unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse("[]").unwrap();
+        let val = crate::grammar::FilterParser::new().parse("[]").unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse(".foo?").unwrap();
+        let val = crate::grammar::FilterParser::new().parse(".foo?").unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new()
+        let val = crate::grammar::FilterParser::new()
             .parse("{ thing = 1, blah = .package.thing }")
             .unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new()
+        let val = crate::grammar::FilterParser::new()
             .parse("[1, 2, 3] | map(. + 1)")
             .unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new()
+        let val = crate::grammar::FilterParser::new()
             .parse(".package[], .dependencies[] | . + 1")
             .unwrap();
         println!("{:?}", val);
 
-        let val = ::grammar::FilterParser::new().parse(".name.thing").unwrap();
+        let val = crate::grammar::FilterParser::new()
+            .parse(".name.thing")
+            .unwrap();
         println!("{:?}", val);
     }
 }

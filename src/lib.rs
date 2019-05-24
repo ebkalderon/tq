@@ -1,10 +1,10 @@
 #![forbid(unsafe_code)]
 
-extern crate lalrpop_util;
-extern crate toml;
-
 /// NOTE: For interactive testing in `main`.
-pub use grammar::FilterParser;
+pub use crate::grammar::FilterParser;
+pub use crate::machine::Machine;
 
 mod ast;
+mod env;
 mod grammar;
+mod machine;

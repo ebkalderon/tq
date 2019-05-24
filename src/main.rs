@@ -1,23 +1,13 @@
 #![forbid(unsafe_code)]
 
-extern crate env_logger;
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate structopt;
-extern crate toml;
-extern crate tq;
-
 use std::fs;
 use std::path::PathBuf;
-use std::str::FromStr;
 
-use failure::ResultExt;
-use log::LevelFilter;
+use env_logger;
+use failure::Fail;
+use log::{info, log, LevelFilter};
 use structopt::StructOpt;
-use toml::Value;
+
 use tq::FilterParser;
 
 #[derive(Debug, Fail)]
@@ -59,7 +49,7 @@ fn main() {
 
     info!("detected the following options: {:?}", opt);
 
-    let toml: String = match opt.read {
+    let _toml: String = match opt.read {
         Some(ref path) => fs::read_to_string(path).unwrap(),
         None => {
             use std::io::{self, Read};
