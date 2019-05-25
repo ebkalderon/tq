@@ -35,5 +35,14 @@ mod tests {
 
         let string = parse_filter("\"false\"").unwrap();
         println!("{:?}", string);
+
+        let integer = parse_filter("0o123").unwrap();
+        println!("{:?}", integer);
+
+        let integer = parse_filter("0x123").unwrap();
+        println!("{:?}", integer);
+
+        let integer = parse_filter("0b101").unwrap();
+        println!("{:?}", integer);
     }
 }
