@@ -1,32 +1,55 @@
-use std::str::{self, FromStr};
+use std::{iter, str};
 
+use pom::char_class::{alpha, alphanum, multispace};
 use pom::parser::*;
 use pom::Error as ParseError;
 
-use self::number::{float, integer};
-use self::string::string;
-use crate::ast::tokens::Literal;
-use crate::ast::Filter;
+use self::construct::{comma, construct};
+use self::filter::filter;
+use self::index::index_expr;
+use self::literal::literal;
+use self::try_catch::{try_catch, try_operator};
+use crate::ast::{
+    tokens::{Ident, Variable},
+    Expr,
+};
 
-mod number;
-mod string;
+mod construct;
+mod filter;
+mod index;
+mod literal;
+mod try_catch;
 
-pub fn parse_filter(filter: &str) -> Result<Literal, ParseError> {
-    literal().parse(filter.as_bytes())
+pub fn parse_filter(filter: &str) -> Result<Expr, ParseError> {
+    (expr() - end()).parse(filter.as_bytes())
 }
 
 fn space<'a>() -> Parser<'a, u8, ()> {
-    one_of(b"\t\r\n").repeat(0..).discard()
+    is_a(multispace).repeat(0..).discard()
 }
 
-fn boolean<'a>() -> Parser<'a, u8, bool> {
-    let boolean = seq(b"true") | seq(b"false");
-    boolean.convert(str::from_utf8).convert(bool::from_str)
+fn identifier<'a>() -> Parser<'a, u8, Ident> {
+    (is_a(alpha) + (is_a(alphanum) | one_of(b"_-")).repeat(0..))
+        .map(|(first, rest)| iter::once(first).chain(rest).collect())
+        .convert(String::from_utf8)
+        .map(Ident::from)
 }
 
-fn literal<'a>() -> Parser<'a, u8, Literal> {
-    boolean().map(Literal::Boolean)
-        | float().map(Literal::Float)
-        | integer().map(Literal::Integer)
-        | string().map(Literal::String)
+fn variable<'a>() -> Parser<'a, u8, Variable> {
+    sym(b'$') * identifier().map(Variable::from)
+}
+
+fn expr<'a>() -> Parser<'a, u8, Expr> {
+    let paren = sym(b'(') * call(expr) - sym(b')');
+    let try_catch = try_catch().map(Expr::Try);
+    let literal = literal().map(Expr::Literal);
+    let field = identifier().map(Expr::Field);
+    let variable = variable().map(Expr::Variable);
+    let filter = filter();
+    let construct = construct();
+
+    let expr = paren | try_catch | literal | field | variable | filter | construct;
+    let wrapped_expr = try_operator(index_expr(expr));
+
+    space() * wrapped_expr - space()
 }

@@ -61,3 +61,56 @@ fn utf32_string<'a>() -> Parser<'a, u8, String> {
         .repeat(1..)
         .map(String::from_iter)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn basic_strings() {
+        let simple = string().parse(b"\"    hello there  \"").unwrap();
+        assert_eq!(simple, "    hello there  ");
+
+        let escaped_utf8 = string().parse(b"\"  \\u1048 \"").unwrap();
+        assert_eq!(escaped_utf8, "  \u{1048} ");
+
+        let escaped_utf32 = string().parse(b"\"\\U00001048\"").unwrap();
+        assert_eq!(escaped_utf32, "\u{1048}");
+    }
+
+    #[test]
+    fn raw_strings() {
+        let simple = string().parse(b"'    hello there  '").unwrap();
+        assert_eq!(simple, "    hello there  ");
+
+        let escaped_utf8 = string().parse(b"'  \\u1048 '").unwrap();
+        assert_eq!(escaped_utf8, "  \\u1048 ");
+
+        let escaped_utf32 = string().parse(b"'\\U00001048'").unwrap();
+        assert_eq!(escaped_utf32, "\\U00001048");
+    }
+
+    #[test]
+    fn basic_multiline_strings() {
+        let simple = string().parse(b"\"\"\"one\n\\n two\\r\t\"\"\"").unwrap();
+        assert_eq!(simple, "one\n\n two\r\t");
+
+        let escaped_utf8 = string().parse(b"\"\"\"  \\u1048 \"\"\"").unwrap();
+        assert_eq!(escaped_utf8, "  \u{1048} ");
+
+        let escaped_utf32 = string().parse(b"\"\"\"\\U00001048\"\"\"").unwrap();
+        assert_eq!(escaped_utf32, "\u{1048}");
+    }
+
+    #[test]
+    fn raw_multiline_strings() {
+        let simple = string().parse(b"'''one\n\\n two\\r\t'''").unwrap();
+        assert_eq!(simple, "one\n\\n two\\r\t");
+
+        let escaped_utf8 = string().parse(b"'''  \\u1048 '''").unwrap();
+        assert_eq!(escaped_utf8, "  \\u1048 ");
+
+        let escaped_utf32 = string().parse(b"'''\\U00001048'''").unwrap();
+        assert_eq!(escaped_utf32, "\\U00001048");
+    }
+}

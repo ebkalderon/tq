@@ -1,6 +1,6 @@
 use toml::value::Datetime;
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct Ident(String);
 
 impl<T: ToString> From<T> for Ident {
@@ -9,7 +9,7 @@ impl<T: ToString> From<T> for Ident {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct IdentPath(Vec<Ident>);
 
 impl<T, U> From<U> for IdentPath
@@ -22,7 +22,16 @@ where
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+pub struct Label(Variable);
+
+impl<T: Into<Ident>> From<T> for Label {
+    fn from(ident: T) -> Self {
+        Label(Variable::from(ident))
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct Variable(Ident);
 
 impl<T: Into<Ident>> From<T> for Variable {
@@ -40,8 +49,52 @@ pub enum Literal {
     String(String),
 }
 
-#[derive(Clone, Debug, PartialEq)]
+impl From<bool> for Literal {
+    fn from(boolean: bool) -> Self {
+        Literal::Boolean(boolean)
+    }
+}
+
+impl From<Datetime> for Literal {
+    fn from(datetime: Datetime) -> Self {
+        Literal::Datetime(datetime)
+    }
+}
+
+impl From<f64> for Literal {
+    fn from(float: f64) -> Self {
+        Literal::Float(float)
+    }
+}
+
+impl From<i64> for Literal {
+    fn from(int: i64) -> Self {
+        Literal::Integer(int)
+    }
+}
+
+impl From<String> for Literal {
+    fn from(s: String) -> Self {
+        Literal::String(s)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum FnParam {
-    Ident(Ident),
+    /// Treat as though a function call with no arguments.
+    Function(IdentPath),
+    /// Shorthand for `f as $f` (take the result of the function and treat as a value).
     Variable(Variable),
+}
+
+impl From<IdentPath> for FnParam {
+    fn from(path: IdentPath) -> Self {
+        FnParam::Function(path)
+    }
+}
+
+impl From<Variable> for FnParam {
+    fn from(var: Variable) -> Self {
+        FnParam::Variable(var)
+    }
 }

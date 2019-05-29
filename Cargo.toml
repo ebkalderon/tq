@@ -13,3 +13,6 @@ pom = "3.0.2"
 regex = "1.1.6"
 structopt = "0.2.15"
 toml = "0.5.1"
+
+[dev-dependencies]
+float-cmp = "0.4"
