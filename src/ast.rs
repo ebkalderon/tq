@@ -127,10 +127,10 @@ pub enum Filter {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum UnaryOp {
-    /// The unary `+` operator.
-    Pos,
     /// The unary `-` operator.
     Neg,
+    /// The unary `!` operator.
+    Not,
 }
 
 #[derive(Clone, Debug, PartialEq)]

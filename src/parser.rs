@@ -1,6 +1,5 @@
-use std::{iter, str};
+use std::str;
 
-use pom::char_class::{alpha, alphanum, multispace};
 use pom::parser::*;
 use pom::Error as ParseError;
 
@@ -8,35 +7,16 @@ use self::construct::construct;
 use self::control_flow::control_flow;
 use self::filter::filter;
 use self::index::index_slice;
-use self::literal::literal;
-use crate::ast::{
-    tokens::{Ident, Variable},
-    *,
-};
+use crate::ast::*;
 
 mod construct;
 mod control_flow;
 mod filter;
 mod index;
-mod literal;
+mod tokens;
 
 pub fn parse_filter(filter: &str) -> Result<Expr, ParseError> {
     (expr() - end()).parse(filter.as_bytes())
-}
-
-fn space<'a>() -> Parser<'a, u8, ()> {
-    is_a(multispace).repeat(0..).discard()
-}
-
-fn identifier<'a>() -> Parser<'a, u8, Ident> {
-    (is_a(alpha) + (is_a(alphanum) | one_of(b"_-")).repeat(0..))
-        .map(|(first, rest)| iter::once(first).chain(rest).collect())
-        .convert(String::from_utf8)
-        .map(Ident::from)
-}
-
-fn variable<'a>() -> Parser<'a, u8, Variable> {
-    sym(b'$') * identifier().map(Variable::from)
 }
 
 fn expr<'a>() -> Parser<'a, u8, Expr> {
@@ -88,10 +68,10 @@ fn product<'a>() -> Parser<'a, u8, Expr> {
 }
 
 fn unary<'a>() -> Parser<'a, u8, Expr> {
-    let pos = sym(b'+').map(|_| UnaryOp::Pos);
     let neg = sym(b'-').map(|_| UnaryOp::Neg);
-    let expr = (pos | neg).opt() + call(index);
-    let expr = space() * expr - space();
+    let not = sym(b'!').map(|_| UnaryOp::Not);
+    let expr = (neg | not).opt() + call(index);
+    let expr = tokens::space() * expr - tokens::space();
     expr.map(|(unary, term)| match unary {
         Some(op) => Expr::Unary(op, Box::from(term)),
         None => term,
@@ -121,8 +101,8 @@ fn terms<'a>() -> Parser<'a, u8, Expr> {
     let control_flow = control_flow();
     let filter = filter();
     let construct = construct();
-    let literal = literal().map(Expr::Literal);
-    let field = identifier().map(Expr::Field);
-    let variable = variable().map(Expr::Variable);
-    paren | control_flow | filter | construct | literal | field | variable
+    let literal = tokens::literal().map(Expr::Literal);
+    let variable = tokens::variable().map(Expr::Variable);
+    let field = tokens::identifier().map(Expr::Field);
+    paren | control_flow | filter | construct | literal | variable | field
 }

@@ -1,7 +1,7 @@
 use pom::parser::*;
 
 use super::expr;
-use crate::ast::{Expr, ExprIndex, ExprSlice};
+use crate::ast::{ExprIndex, ExprSlice};
 
 pub fn index<'a>() -> Parser<'a, u8, Box<ExprIndex>> {
     let exact = (sym(b'[') * call(expr).opt() - sym(b']')).map(ExprIndex::Exact);

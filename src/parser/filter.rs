@@ -2,8 +2,8 @@ use std::iter;
 
 use pom::parser::*;
 
-use super::identifier;
 use super::index::index;
+use super::tokens::identifier;
 use crate::ast::{Expr, Filter};
 
 pub fn filter<'a>() -> Parser<'a, u8, Expr> {
