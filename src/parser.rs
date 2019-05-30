@@ -16,7 +16,7 @@ mod index;
 mod tokens;
 
 pub fn parse_filter(filter: &str) -> Result<Expr, ParseError> {
-    (tokens::space() * expr() - end()).parse(filter.as_bytes())
+    (expr() - end()).parse(filter.as_bytes())
 }
 
 fn expr<'a>() -> Parser<'a, u8, Expr> {
