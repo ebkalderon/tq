@@ -35,7 +35,37 @@ fn pipe<'a>() -> Parser<'a, u8, Expr> {
 
 fn chain<'a>() -> Parser<'a, u8, Expr> {
     let comma = sym(b',').map(|_| BinaryOp::Comma);
-    let expr = call(sum) + (comma + call(sum)).repeat(0..);
+    let expr = call(logical) + (comma + call(logical)).repeat(0..);
+    expr.map(|(first, rest)| {
+        rest.into_iter().fold(first, |lhs, (op, rhs)| {
+            Expr::Binary(op, Box::from(lhs), Box::from(rhs))
+        })
+    })
+}
+
+fn logical<'a>() -> Parser<'a, u8, Expr> {
+    let and = seq(b"and").map(|_| BinaryOp::And);
+    let or = seq(b"or").map(|_| BinaryOp::Or);
+    let expr = call(compare) + ((and | or) + call(compare)).repeat(0..);
+    expr.map(|(first, rest)| {
+        rest.into_iter().fold(first, |lhs, (op, rhs)| {
+            Expr::Binary(op, Box::from(lhs), Box::from(rhs))
+        })
+    })
+}
+
+fn compare<'a>() -> Parser<'a, u8, Expr> {
+    let eq = seq(b"==").map(|_| BinaryOp::Eq);
+    let neq = seq(b"!=").map(|_| BinaryOp::NotEq);
+    let equality = eq | neq;
+
+    let lte = seq(b"<=").map(|_| BinaryOp::LessThanEq);
+    let lt = sym(b'<').map(|_| BinaryOp::LessThan);
+    let gte = seq(b">=").map(|_| BinaryOp::LessThanEq);
+    let gt = sym(b'>').map(|_| BinaryOp::LessThan);
+    let comparison = lte | lt | gte | gt;
+
+    let expr = call(sum) + ((equality | comparison) + call(sum)).repeat(0..);
     expr.map(|(first, rest)| {
         rest.into_iter().fold(first, |lhs, (op, rhs)| {
             Expr::Binary(op, Box::from(lhs), Box::from(rhs))
