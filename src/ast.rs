@@ -177,7 +177,8 @@ pub struct ExprBinding {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ExprIndex {
-    Exact(Option<Expr>),
+    Iter,
+    Exact(Expr),
     Slice(ExprSlice),
 }
 

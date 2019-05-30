@@ -4,9 +4,10 @@ use super::expr;
 use crate::ast::{ExprIndex, ExprSlice};
 
 pub fn index<'a>() -> Parser<'a, u8, Box<ExprIndex>> {
-    let exact = (sym(b'[') * call(expr).opt() - sym(b']')).map(ExprIndex::Exact);
+    let iter = seq(b"[]").map(|_| ExprIndex::Iter);
+    let exact = (sym(b'[') * call(expr) - sym(b']')).map(ExprIndex::Exact);
     let slice = index_slice().map(ExprIndex::Slice);
-    (exact | slice).map(Box::from)
+    (iter | exact | slice).map(Box::from)
 }
 
 pub fn index_slice<'a>() -> Parser<'a, u8, ExprSlice> {

@@ -16,7 +16,7 @@ mod index;
 mod tokens;
 
 pub fn parse_filter(filter: &str) -> Result<Expr, ParseError> {
-    (expr() - end()).parse(filter.as_bytes())
+    (tokens::space() * expr() - end()).parse(filter.as_bytes())
 }
 
 fn expr<'a>() -> Parser<'a, u8, Expr> {
@@ -79,9 +79,10 @@ fn unary<'a>() -> Parser<'a, u8, Expr> {
 }
 
 fn index<'a>() -> Parser<'a, u8, Expr> {
-    let exact = (sym(b'[') * call(expr).opt() - sym(b']')).map(ExprIndex::Exact);
+    let iter = seq(b"[]").map(|_| ExprIndex::Iter);
+    let exact = (sym(b'[') * call(expr) - sym(b']')).map(ExprIndex::Exact);
     let slice = index_slice().map(ExprIndex::Slice);
-    let expr = call(try_postfix) + (exact | slice).opt();
+    let expr = call(try_postfix) + (iter | exact | slice).opt();
     expr.map(|(term, index)| match index {
         Some(index) => Expr::Index(Box::from(term), Box::from(index)),
         None => term,
