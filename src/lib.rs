@@ -24,7 +24,7 @@ mod tests {
         let fields = parse_filter("[13]").unwrap();
         println!("{:?}", fields);
 
-        let fields = parse_filter("{ birthday = [1, 2, 3], '1234' = true }").unwrap();
+        let fields = parse_filter("{ birthday = [1, 2, 3], hello = true }").unwrap();
         println!("{:?}", fields);
     }
 }

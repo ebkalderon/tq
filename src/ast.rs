@@ -53,7 +53,7 @@ pub enum Expr {
     /// `12`, `-4.0`, `false`, `"foo"`, `'bar'`
     Literal(Literal),
     /// `[1, 2, 3, 4]`, `[map(. + 1)]`
-    Array(Box<Expr>),
+    Array(Option<Box<Expr>>),
     /// `{ foo = "bar", baz = 5 }`
     Table(Vec<(Expr, Expr)>),
 
@@ -67,8 +67,6 @@ pub enum Expr {
     Assign(Box<Expr>, Box<Expr>),
     /// `.package.authors[] += "suffix"`
     AssignOp(BinaryOp, Box<Expr>, Box<Expr>),
-    /// `.dependencies, .dev-dependencies, .build-dependencies`
-    Comma(Vec<Expr>),
 
     /// `.package`
     /// `.dependencies.log`
@@ -163,10 +161,12 @@ pub enum BinaryOp {
     And,
     /// The binary `or` operator.
     Or,
-    /// The binary `|` operator.
-    Pipe,
     /// The binary `//` operator.
     Alt,
+    /// The binary `,` operator.
+    Comma,
+    /// The binary `|` operator.
+    Pipe,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -212,6 +212,12 @@ pub struct ExprFnDecl {
 pub struct ExprIfElse {
     clauses: Vec<(Expr, Expr)>,
     fallback: Expr,
+}
+
+impl ExprIfElse {
+    pub fn new(clauses: Vec<(Expr, Expr)>, fallback: Expr) -> Self {
+        ExprIfElse { clauses, fallback }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

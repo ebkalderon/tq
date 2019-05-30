@@ -14,7 +14,7 @@ pub fn filter<'a>() -> Parser<'a, u8, Expr> {
     let segments = first + (field() | index().map(Filter::Index)).repeat(0..);
     let filter = segments.map(concat_filter_path);
 
-    (filter | recurse | identity).map(|e| Expr::Filter(Box::new(e)))
+    (recurse | filter | identity).map(|e| Expr::Filter(Box::new(e)))
 }
 
 fn field<'a>() -> Parser<'a, u8, Filter> {
