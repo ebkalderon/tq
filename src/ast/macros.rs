@@ -98,22 +98,27 @@ macro_rules! tq_expr_index {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! tq_filter {
+    // Identity filter literal.
     (.) => {
         Filter::Identity
     };
 
+    // Recurse filter literal.
     (..) => {
         Filter::Recurse
     };
 
+    // Single field path.
     ( .$field:ident ) => {
         Filter::Field($crate::tq_token!($field))
     };
 
+    // Single slice path.
     ( .[$($expr:tt)*] ) => {
         Filter::Index(Box::new($crate::tq_expr_index!($($expr)*)))
     };
 
+    // Nested path beginning with an identifier-style field access.
     ( .$field:ident $($rest:tt)+ ) => {
         $crate::tq_filter!(@path $($rest)+)
             .fold($crate::tq_filter!(.$field), |seq, next| {
@@ -121,6 +126,7 @@ macro_rules! tq_filter {
             })
     };
 
+    // Nested path beginning with a slice-style field access.
     ( .[$($expr:tt)*] $($rest:tt)+ ) => {
         $crate::tq_filter!(@path $($rest)+)
             .fold($crate::tq_filter!(.[$($expr)*]), |seq, next| {
@@ -128,18 +134,22 @@ macro_rules! tq_filter {
             })
     };
 
+    // Final path segment is an identifier-style field.
     (@path .$field:ident) => {
         ::std::iter::once($crate::tq_filter!(.$field))
     };
 
+    // Next path segment is an identifier-style field.
     (@path .$field:ident $($rest:tt)+) => {
         $crate::tq_filter!(@path .$field).chain($crate::tq_filter!(@path $($rest)+))
     };
 
+    // Final path segment is a slice-style field.
     (@path [$($expr:tt)*]) => {
         ::std::iter::once($crate::tq_filter!(.[$($expr)*]))
     };
 
+    // Next path segment is a slice-style field.
     (@path [$($expr:tt)*] $($rest:tt)+) => {
         $crate::tq_filter!(@path [$($expr)*]).chain($crate::tq_filter!(@path $($rest)+))
     };
