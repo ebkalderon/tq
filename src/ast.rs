@@ -52,7 +52,7 @@ pub enum Expr {
     Field(Ident),
     /// `$foo`
     Variable(Variable),
-    /// `12`, `-4.0`, `false`, `"foo"`, `'bar'`
+    /// `12`, `+4.0`, `false`, `"foo"`, `'bar'`
     Literal(Literal),
     /// `[1, 2, 3, 4]`, `[map(. + 1)]`
     Array(Option<Box<Expr>>),
@@ -60,7 +60,7 @@ pub enum Expr {
     Table(Vec<(Expr, Expr)>),
 
     /// `-12`
-    /// `+15.0`
+    /// `!15.0`
     Unary(UnaryOp, Box<Expr>),
     /// `.foo + 5`
     /// `.dependencies[] | .version`
