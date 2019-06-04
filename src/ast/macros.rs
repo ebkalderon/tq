@@ -1,3 +1,14 @@
+//! Utility macros for constructing ASTs from literals.
+
+/// Construct a `tq::ast::Expr` from a `tq` filter literal.
+///
+/// # Example
+///
+/// ```rust,edition2018
+/// # use tq::tq;
+/// #
+/// let expr = tq!(.foo.bar["baz"]);
+/// ```
 #[macro_export]
 macro_rules! tq {
     ( $($args:tt)+ ) => {

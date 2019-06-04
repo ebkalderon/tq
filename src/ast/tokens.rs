@@ -1,11 +1,25 @@
+use std::fmt::{Display, Formatter, Result as FmtResult};
+
 use toml::value::Datetime;
 
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct Ident(String);
 
-impl<T: ToString> From<T> for Ident {
-    fn from(string: T) -> Self {
-        Ident(string.to_string())
+impl<'a> From<&'a str> for Ident {
+    fn from(s: &'a str) -> Self {
+        Ident(s.to_owned())
+    }
+}
+
+impl From<String> for Ident {
+    fn from(s: String) -> Self {
+        Ident(s)
+    }
+}
+
+impl Display for Ident {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        write!(fmt, "{}", self.0)
     }
 }
 
@@ -22,6 +36,13 @@ where
     }
 }
 
+impl Display for IdentPath {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        let idents: Vec<_> = self.0.iter().map(|i| i.to_string()).collect();
+        write!(fmt, "{}", idents.join("::"))
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct Label(Variable);
 
@@ -31,12 +52,24 @@ impl<T: Into<Ident>> From<T> for Label {
     }
 }
 
+impl Display for Label {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        write!(fmt, "{}", self.0)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct Variable(Ident);
 
 impl<T: Into<Ident>> From<T> for Variable {
     fn from(ident: T) -> Self {
         Variable(ident.into())
+    }
+}
+
+impl Display for Variable {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        write!(fmt, "${}", self.0)
     }
 }
 
@@ -85,6 +118,18 @@ impl From<String> for Literal {
     }
 }
 
+impl Display for Literal {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        match *self {
+            Literal::Boolean(ref b) => write!(fmt, "{}", b),
+            Literal::Datetime(ref dt) => write!(fmt, "{}", dt),
+            Literal::Float(ref f) => write!(fmt, "{}", f),
+            Literal::Integer(ref i) => write!(fmt, "{}", i),
+            Literal::String(ref s) => write!(fmt, "{}", s),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub enum FnParam {
     /// Treat as though a function call with no arguments.
@@ -102,5 +147,14 @@ impl From<IdentPath> for FnParam {
 impl From<Variable> for FnParam {
     fn from(var: Variable) -> Self {
         FnParam::Variable(var)
+    }
+}
+
+impl Display for FnParam {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        match *self {
+            FnParam::Function(ref path) => write!(fmt, "{}", path),
+            FnParam::Variable(ref var) => write!(fmt, "{}", var),
+        }
     }
 }
