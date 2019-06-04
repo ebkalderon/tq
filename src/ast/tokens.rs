@@ -73,6 +73,12 @@ impl From<i64> for Literal {
     }
 }
 
+impl<'a> From<&'a str> for Literal {
+    fn from(s: &'a str) -> Self {
+        Literal::String(s.to_owned())
+    }
+}
+
 impl From<String> for Literal {
     fn from(s: String) -> Self {
         Literal::String(s)

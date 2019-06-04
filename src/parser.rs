@@ -109,7 +109,7 @@ fn unary<'a>() -> Parser<'a, u8, Expr> {
 }
 
 fn index<'a>() -> Parser<'a, u8, Expr> {
-    let iter = seq(b"[]").map(|_| ExprIndex::Iter);
+    let iter = (sym(b'[') + tokens::space() + sym(b']')).map(|_| ExprIndex::Iter);
     let exact = (sym(b'[') * call(expr) - sym(b']')).map(ExprIndex::Exact);
     let slice = index_slice().map(ExprIndex::Slice);
     let expr = call(try_postfix) + (iter | exact | slice).opt();

@@ -1,5 +1,3 @@
-use std::iter;
-
 use pom::parser::*;
 
 use super::index::index;
@@ -12,57 +10,86 @@ pub fn filter<'a>() -> Parser<'a, u8, Expr> {
 
     let first = field() | (sym(b'.') * index().map(Filter::Index));
     let segments = first + (field() | index().map(Filter::Index)).repeat(0..);
-    let filter = segments.map(concat_filter_path);
+    let path = segments.map(|(first, rest)| {
+        rest.into_iter().fold(first, |prev, next| {
+            Filter::Path(Box::new(prev), Box::new(next))
+        })
+    });
 
-    (recurse | filter | identity).map(|e| Expr::Filter(Box::new(e)))
+    (recurse | path | identity).map(|e| Expr::Filter(Box::new(e)))
 }
 
 fn field<'a>() -> Parser<'a, u8, Filter> {
     sym(b'.') * identifier().map(Filter::Field)
 }
 
-fn concat_filter_path(filter_segments: (Filter, Vec<Filter>)) -> Filter {
-    let (first, remaining) = filter_segments;
-    if remaining.is_empty() {
-        first
-    } else {
-        Filter::Path(iter::once(first).chain(remaining).collect())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    use crate::ast::tokens::Ident;
+    use crate::tq;
+
+    macro_rules! filter {
+        ($($expr:tt)+) => {
+            (
+                tq!($($expr)+),
+                concat!($(stringify!($expr)),+)
+            )
+        };
+    }
 
     #[test]
     fn identity() {
-        let expr = filter().parse(".".as_bytes()).unwrap();
-        assert_eq!(expr, Expr::Filter(Box::new(Filter::Identity)));
+        let (expected, path) = filter!(.);
+        let actual = filter().parse(path.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
     }
 
     #[test]
     fn recurse() {
-        let expr = filter().parse("..".as_bytes()).unwrap();
-        assert_eq!(expr, Expr::Filter(Box::new(Filter::Recurse)));
+        let (expected, path) = filter!(..);
+        let actual = filter().parse(path.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn iterate() {
+        let (expected, path) = filter!(.[]);
+        let actual = filter().parse(path.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, path) = filter!(.foo[]);
+        let actual = filter().parse(path.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, path) = filter!(.["foo"][]);
+        let actual = filter().parse(path.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
     }
 
     #[test]
     fn simple_path() {
-        let simple_path = Expr::Filter(Box::new(Filter::Field(Ident::from("foo"))));
-        let expr = filter().parse(".foo".as_bytes()).unwrap();
-        assert_eq!(expr, simple_path);
+        let (expected, path) = filter!(.foo);
+        let actual = filter().parse(path.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, path) = filter!(.["foo"]);
+        let actual = filter().parse(path.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
     }
 
     #[test]
     fn nested_path() {
-        let complex_path = Expr::Filter(Box::new(Filter::Path(vec![
-            Filter::Field(Ident::from("foo")),
-            Filter::Field(Ident::from("bar")),
-            Filter::Field(Ident::from("baz")),
-        ])));
-        let expr = filter().parse(".foo.bar.baz".as_bytes()).unwrap();
-        assert_eq!(expr, complex_path);
+        let (expected, path) = filter!(.foo.bar.baz);
+        let actual = filter().parse(path.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, path) = filter!(.["foo"]["bar"]["baz"]);
+        let actual = filter().parse(path.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, path) = filter!(.["foo"].bar["baz"]);
+        let actual = filter().parse(path.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
     }
 }

@@ -1,6 +1,7 @@
 #![forbid(unsafe_code)]
+#![recursion_limit = "128"]
 
-mod ast;
+pub mod ast;
 pub mod parser;
 
 #[cfg(test)]
@@ -15,7 +16,7 @@ mod tests {
         let boolean = parse_filter("false").unwrap();
         println!("{:?}", boolean);
 
-        let identity = parse_filter(".").unwrap();
+        let identity = parse_filter(".foo[+12]").unwrap();
         println!("{:?}", identity);
 
         let recurse = parse_filter("..").unwrap();

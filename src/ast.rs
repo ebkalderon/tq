@@ -5,6 +5,8 @@ use self::tokens::{FnParam, Ident, IdentPath, Label, Literal, Variable};
 
 pub mod tokens;
 
+mod macros;
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
     /// `import "my_tq_module" as FOO;`
@@ -122,7 +124,7 @@ pub enum Filter {
     /// `.foo["hello"]`
     Index(Box<ExprIndex>),
     /// `.foo.bar["baz"][]`
-    Path(Vec<Filter>),
+    Path(Box<Filter>, Box<Filter>),
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -1,10 +1,10 @@
 use pom::parser::*;
 
-use super::expr;
+use super::{expr, tokens};
 use crate::ast::{ExprIndex, ExprSlice};
 
 pub fn index<'a>() -> Parser<'a, u8, Box<ExprIndex>> {
-    let iter = seq(b"[]").map(|_| ExprIndex::Iter);
+    let iter = (sym(b'[') + tokens::space() + sym(b']')).map(|_| ExprIndex::Iter);
     let exact = (sym(b'[') * call(expr) - sym(b']')).map(ExprIndex::Exact);
     let slice = index_slice().map(ExprIndex::Slice);
     (iter | exact | slice).map(Box::from)
