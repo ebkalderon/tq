@@ -37,10 +37,12 @@ macro_rules! tq_expr_pipe {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! tq_expr {
+    // Parenthesized expressions.
     ( ($($expr:tt)+) ) => {
         $crate::tq_expr!($($expr)+)
     };
 
+    // Unary operations.
     ( -$($expr:tt)+ ) => {
         Expr::Unary(UnaryOp::Neg, Box::new($crate::tq_expr!($($expr)+)))
     };
@@ -49,10 +51,7 @@ macro_rules! tq_expr {
         Expr::Unary(UnaryOp::Not, Box::new($crate::tq_expr!($($expr)+)))
     };
 
-    ( $i:ident ) => {
-        Expr::Field($crate::tq_token!($i))
-    };
-
+    // Filters.
     ( .. ) => {
         Expr::Filter(Box::new($crate::tq_filter!(..)))
     };
@@ -61,8 +60,14 @@ macro_rules! tq_expr {
         Expr::Filter(Box::new($crate::tq_filter!(.$($path)*)))
     };
 
+    // Literal values.
     ( $literal:expr ) => {
         Expr::Literal($crate::tq_token!($literal))
+    };
+
+    // Field identifier.
+    ( $i:ident ) => {
+        Expr::Field($crate::tq_token!($i))
     };
 }
 
