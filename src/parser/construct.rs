@@ -2,7 +2,7 @@ use pom::parser::*;
 
 use super::tokens;
 use super::{expr, unary};
-use crate::ast::{BinaryOp, Expr};
+use crate::ast::{BinaryOp, Expr, TableKey};
 
 pub fn construct<'a>() -> Parser<'a, u8, Expr> {
     array() | table()
@@ -19,11 +19,11 @@ fn table<'a>() -> Parser<'a, u8, Expr> {
     (sym(b'{') * list(assign, sym(b',')) - sym(b'}')).map(Expr::Table)
 }
 
-fn table_key<'a>() -> Parser<'a, u8, Expr> {
-    let variable = tokens::variable().map(Expr::Variable);
-    let identifier = tokens::identifier().map(Expr::Field);
-    let literal = tokens::literal().map(Expr::Literal);
-    let expr = sym(b'(') * call(expr) - sym(b')');
+pub fn table_key<'a>() -> Parser<'a, u8, TableKey> {
+    let variable = tokens::variable().map(TableKey::Variable);
+    let identifier = tokens::identifier().map(TableKey::Field);
+    let literal = tokens::literal().map(TableKey::Literal);
+    let expr = sym(b'(') * call(expr).map(TableKey::Expr) - sym(b')');
     tokens::space() * (variable | identifier | literal | expr) - tokens::space()
 }
 

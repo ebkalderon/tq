@@ -11,21 +11,24 @@ mod tests {
     #[test]
     fn parse() {
         let boolean = parse_filter("true").unwrap();
-        println!("{:?}", boolean);
+        println!("{}", boolean);
 
         let boolean = parse_filter("false").unwrap();
-        println!("{:?}", boolean);
+        println!("{}", boolean);
 
-        let identity = parse_filter(".foo[+12]").unwrap();
-        println!("{:?}", identity);
+        let identity = parse_filter(".foo.bar[\"hello\"][] | 12 + ..").unwrap();
+        println!("{}", identity);
 
         let recurse = parse_filter("..").unwrap();
-        println!("{:?}", recurse);
+        println!("{}", recurse);
 
-        let fields = parse_filter("[13]").unwrap();
-        println!("{:?}", fields);
+        let fields = parse_filter("[13, 12, blah]").unwrap();
+        println!("{}", fields);
 
         let fields = parse_filter("{ birthday = [1, 2, 3], hello = true }").unwrap();
-        println!("{:?}", fields);
+        println!("{}", fields);
+
+        let function = parse_filter("def thing: def foo($f): .; foo(.); thing | thing").unwrap();
+        println!("{}", function);
     }
 }

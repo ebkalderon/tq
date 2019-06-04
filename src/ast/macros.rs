@@ -186,6 +186,31 @@ macro_rules! tq_token {
     };
 }
 
+/// Returns an AST constructed by `tq!()` and also the filter expression as a static string.
+///
+/// This is useful for testing whether the parser and the `tq!()` macro both produce the same AST.
+///
+/// # Example
+///
+/// ```rust,edition2018
+/// # use tq::tq_expr_and_str;
+/// # use tq::ast::{Expr, Filter};
+/// #
+/// let (expr, s) = tq_expr_and_str!(.);
+/// assert_eq!(expr, Expr::Filter(Filter::Identity));
+/// assert_eq!(s, ".");
+/// ```
+#[cfg(test)]
+#[macro_export]
+macro_rules! tq_expr_and_str {
+    ($($expr:tt)+) => {
+        (
+            $crate::tq!($($expr)+),
+            concat!($(stringify!($expr)),+)
+        )
+    };
+}
+
 #[cfg(test)]
 mod tests {
     #[test]

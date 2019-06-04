@@ -25,70 +25,61 @@ fn field<'a>() -> Parser<'a, u8, Filter> {
 
 #[cfg(test)]
 mod tests {
+    use crate::tq_expr_and_str;
+
     use super::*;
-
-    use crate::tq;
-
-    macro_rules! filter {
-        ($($expr:tt)+) => {
-            (
-                tq!($($expr)+),
-                concat!($(stringify!($expr)),+)
-            )
-        };
-    }
 
     #[test]
     fn identity() {
-        let (expected, path) = filter!(.);
+        let (expected, path) = tq_expr_and_str!(.);
         let actual = filter().parse(path.as_bytes()).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn recurse() {
-        let (expected, path) = filter!(..);
+        let (expected, path) = tq_expr_and_str!(..);
         let actual = filter().parse(path.as_bytes()).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn iterate() {
-        let (expected, path) = filter!(.[]);
+        let (expected, path) = tq_expr_and_str!(.[]);
         let actual = filter().parse(path.as_bytes()).unwrap();
         assert_eq!(expected, actual);
 
-        let (expected, path) = filter!(.foo[]);
+        let (expected, path) = tq_expr_and_str!(.foo[]);
         let actual = filter().parse(path.as_bytes()).unwrap();
         assert_eq!(expected, actual);
 
-        let (expected, path) = filter!(.["foo"][]);
+        let (expected, path) = tq_expr_and_str!(.["foo"][]);
         let actual = filter().parse(path.as_bytes()).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn simple_path() {
-        let (expected, path) = filter!(.foo);
+        let (expected, path) = tq_expr_and_str!(.foo);
         let actual = filter().parse(path.as_bytes()).unwrap();
         assert_eq!(expected, actual);
 
-        let (expected, path) = filter!(.["foo"]);
+        let (expected, path) = tq_expr_and_str!(.["foo"]);
         let actual = filter().parse(path.as_bytes()).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn nested_path() {
-        let (expected, path) = filter!(.foo.bar.baz);
+        let (expected, path) = tq_expr_and_str!(.foo.bar.baz);
         let actual = filter().parse(path.as_bytes()).unwrap();
         assert_eq!(expected, actual);
 
-        let (expected, path) = filter!(.["foo"]["bar"]["baz"]);
+        let (expected, path) = tq_expr_and_str!(.["foo"]["bar"]["baz"]);
         let actual = filter().parse(path.as_bytes()).unwrap();
         assert_eq!(expected, actual);
 
-        let (expected, path) = filter!(.["foo"].bar["baz"]);
+        let (expected, path) = tq_expr_and_str!(.["foo"].bar["baz"]);
         let actual = filter().parse(path.as_bytes()).unwrap();
         assert_eq!(expected, actual);
     }

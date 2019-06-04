@@ -6,13 +6,16 @@ use pom::Error as ParseError;
 use self::construct::construct;
 use self::control_flow::control_flow;
 use self::filter::filter;
+use self::function::{function_call, function_decl};
 use self::index::index_slice;
 use crate::ast::*;
 
 mod construct;
 mod control_flow;
 mod filter;
+mod function;
 mod index;
+mod pattern;
 mod tokens;
 
 pub fn parse_filter(filter: &str) -> Result<Expr, ParseError> {
@@ -35,10 +38,19 @@ fn pipe<'a>() -> Parser<'a, u8, Expr> {
 
 fn chain<'a>() -> Parser<'a, u8, Expr> {
     let comma = sym(b',').map(|_| BinaryOp::Comma);
-    let expr = call(logical) + (comma + call(logical)).repeat(0..);
+    let expr = call(fn_decl) + (comma + call(fn_decl)).repeat(0..);
     expr.map(|(first, rest)| {
         rest.into_iter().fold(first, |lhs, (op, rhs)| {
             Expr::Binary(op, Box::from(lhs), Box::from(rhs))
+        })
+    })
+}
+
+fn fn_decl<'a>() -> Parser<'a, u8, Expr> {
+    let expr = function_decl().repeat(0..) + call(logical);
+    expr.map(|(decls, expr)| {
+        decls.into_iter().fold(expr, |expr, decl| {
+            Expr::FnDecl(Box::new(decl), Box::new(expr))
         })
     })
 }
@@ -100,10 +112,18 @@ fn product<'a>() -> Parser<'a, u8, Expr> {
 fn unary<'a>() -> Parser<'a, u8, Expr> {
     let neg = sym(b'-').map(|_| UnaryOp::Neg);
     let not = sym(b'!').map(|_| UnaryOp::Not);
-    let expr = (neg | not).opt() + call(index);
+    let expr = (neg | not).opt() + call(try_postfix);
     let expr = tokens::space() * expr - tokens::space();
     expr.map(|(unary, term)| match unary {
         Some(op) => Expr::Unary(op, Box::from(term)),
+        None => term,
+    })
+}
+
+fn try_postfix<'a>() -> Parser<'a, u8, Expr> {
+    let expr = call(index) + sym(b'?').opt();
+    expr.map(|(term, is_try)| match is_try {
+        Some(_) => Expr::Try(Box::new(ExprTry::new(term, None))),
         None => term,
     })
 }
@@ -112,28 +132,20 @@ fn index<'a>() -> Parser<'a, u8, Expr> {
     let iter = (sym(b'[') + tokens::space() + sym(b']')).map(|_| ExprIndex::Iter);
     let exact = (sym(b'[') * call(expr) - sym(b']')).map(ExprIndex::Exact);
     let slice = index_slice().map(ExprIndex::Slice);
-    let expr = call(try_postfix) + (iter | exact | slice).opt();
+    let expr = call(terms) + (iter | exact | slice).opt();
     expr.map(|(term, index)| match index {
         Some(index) => Expr::Index(Box::from(term), Box::from(index)),
         None => term,
     })
 }
 
-fn try_postfix<'a>() -> Parser<'a, u8, Expr> {
-    let expr = call(terms) + sym(b'?').opt();
-    expr.map(|(term, is_try)| match is_try {
-        Some(_) => Expr::Try(Box::new(ExprTry::new(term, None))),
-        None => term,
-    })
-}
-
 fn terms<'a>() -> Parser<'a, u8, Expr> {
     let paren = sym(b'(') * call(expr) - sym(b')');
+    let fn_call = function_call().map(Expr::FnCall);
     let control_flow = control_flow();
     let filter = filter();
     let construct = construct();
     let literal = tokens::literal().map(Expr::Literal);
     let variable = tokens::variable().map(Expr::Variable);
-    let field = tokens::identifier().map(Expr::Field);
-    paren | control_flow | filter | construct | literal | variable | field
+    paren | fn_call | control_flow | filter | construct | literal | variable
 }

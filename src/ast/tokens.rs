@@ -125,7 +125,7 @@ impl Display for Literal {
             Literal::Datetime(ref dt) => write!(fmt, "{}", dt),
             Literal::Float(ref f) => write!(fmt, "{}", f),
             Literal::Integer(ref i) => write!(fmt, "{}", i),
-            Literal::String(ref s) => write!(fmt, "{}", s),
+            Literal::String(ref s) => write!(fmt, "\"{}\"", s),
         }
     }
 }

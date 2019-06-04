@@ -1,5 +1,3 @@
-use std::iter;
-
 use pom::parser::*;
 
 use super::expr;
@@ -10,14 +8,14 @@ pub fn control_flow<'a>() -> Parser<'a, u8, Expr> {
 }
 
 fn if_else<'a>() -> Parser<'a, u8, Expr> {
-    let first_clause = seq(b"if") * call(expr) + (seq(b"then") * call(expr));
-    let other_clauses = seq(b"elif") * call(expr) + (seq(b"then") * call(expr));
-    let clauses = (first_clause + other_clauses.repeat(0..))
-        .map(|(first, others)| iter::once(first).chain(others).collect());
+    let main_clause = seq(b"if") * call(expr) + (seq(b"then") * call(expr));
+    let alt_clauses = (seq(b"elif") * call(expr) + (seq(b"then") * call(expr))).repeat(0..);
     let fallback = seq(b"else") * call(expr) - seq(b"end");
 
-    let block = (clauses + fallback).map(|(c, f)| ExprIfElse::new(c, f));
-    block.map(Box::from).map(Expr::IfElse)
+    (main_clause + alt_clauses + fallback)
+        .map(|((main, alt), f)| ExprIfElse::new(main, alt, f))
+        .map(Box::from)
+        .map(Expr::IfElse)
 }
 
 fn try_catch<'a>() -> Parser<'a, u8, Expr> {
