@@ -45,6 +45,10 @@ macro_rules! tq_expr {
         Expr::Unary(UnaryOp::Neg, Box::new($crate::tq_expr!($($expr)+)))
     };
 
+    ( !$($expr:tt)+ ) => {
+        Expr::Unary(UnaryOp::Not, Box::new($crate::tq_expr!($($expr)+)))
+    };
+
     ( $i:ident ) => {
         Expr::Field($crate::tq_token!($i))
     };
@@ -57,8 +61,8 @@ macro_rules! tq_expr {
         Expr::Filter(Box::new($crate::tq_filter!(.$($path)*)))
     };
 
-    ( $($literal:tt)+ ) => {
-        Expr::Literal($crate::tq_token!($($literal)+))
+    ( $literal:expr ) => {
+        Expr::Literal($crate::tq_token!($literal))
     };
 }
 
