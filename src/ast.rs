@@ -1,4 +1,3 @@
-use std::collections::BTreeMap;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::path::PathBuf;
 
@@ -126,14 +125,19 @@ impl Display for Expr {
                 write!(fmt, "{{{}}}", table.join(", "))
             }
 
-            Expr::Unary(ref op, ref expr) => write!(fmt, "{}{}", op, expr),
+            Expr::Unary(ref op, ref expr) => match **expr {
+                Expr::Binary(_, _, _) => write!(fmt, "{}({})", op, expr),
+                _ => write!(fmt, "{}{}", op, expr),
+            },
             Expr::Binary(ref op, ref lhs, ref rhs) => write!(fmt, "{}{}{}", lhs, op, rhs),
             Expr::Assign(ref lhs, ref rhs) => write!(fmt, "{} = {}", lhs, rhs),
             Expr::AssignOp(ref op, ref lhs, ref rhs) => write!(fmt, "{} {}= {}", lhs, op, rhs),
 
             Expr::Filter(ref filter) => write!(fmt, "{}", filter),
-            Expr::Index(ref expr, ref index) => write!(fmt, "{}{}", expr, index),
-
+            Expr::Index(ref expr, ref index) => match **expr {
+                Expr::Binary(_, _, _) => write!(fmt, "({}){}", expr, index),
+                _ => write!(fmt, "{}{}", expr, index),
+            },
             Expr::Binding(ref binding) => write!(fmt, "{}", binding),
 
             Expr::FnDecl(ref decl, ref expr) => write!(fmt, "{} {}", decl, expr),
@@ -209,8 +213,8 @@ pub enum UnaryOp {
 impl Display for UnaryOp {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         match *self {
-            UnaryOp::Neg => fmt.write_str("!"),
-            UnaryOp::Not => fmt.write_str("-"),
+            UnaryOp::Neg => fmt.write_str("-"),
+            UnaryOp::Not => fmt.write_str("!"),
         }
     }
 }
@@ -288,7 +292,10 @@ impl ExprBinding {
 
 impl Display for ExprBinding {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
-        write!(fmt, "{} as {}", self.expr, self.pattern)
+        match self.expr {
+            Expr::Binary(_, _, _) => write!(fmt, "({}) as {}", self.expr, self.pattern),
+            _ => write!(fmt, "{} as {}", self.expr, self.pattern),
+        }
     }
 }
 
@@ -344,9 +351,9 @@ impl Display for ExprPattern {
             ExprPattern::Table(ref table) => {
                 let table: Vec<_> = table
                     .iter()
-                    .map(|(k, v)| format!(" {} = {}", k, v))
+                    .map(|(k, v)| format!("{} = {}", k, v))
                     .collect();
-                write!(fmt, "{{{}}}", table.join(","))
+                write!(fmt, "{{{}}}", table.join(", "))
             }
         }
     }
@@ -483,7 +490,10 @@ impl Display for ExprTry {
         if let Some(ref catch) = &self.fallback {
             write!(fmt, "try {} catch {}", self.expr, catch)
         } else {
-            write!(fmt, "{}?", self.expr)
+            match self.expr {
+                Expr::Binary(_, _, _) => write!(fmt, "({})?", self.expr),
+                _ => write!(fmt, "{}?", self.expr),
+            }
         }
     }
 }

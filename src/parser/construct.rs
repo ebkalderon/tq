@@ -38,6 +38,7 @@ fn table_value<'a>() -> Parser<'a, u8, Expr> {
         })
     };
 
+    let paren = sym(b'(') * call(table_value) - sym(b')');
     let unary = call(unary);
-    tokens::space() * (pipe | unary) - tokens::space()
+    tokens::space() * (paren | pipe | unary) - tokens::space()
 }

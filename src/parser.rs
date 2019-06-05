@@ -23,12 +23,22 @@ pub fn parse_filter(filter: &str) -> Result<Expr, ParseError> {
 }
 
 fn expr<'a>() -> Parser<'a, u8, Expr> {
-    pipe()
+    binding()
+}
+
+fn binding<'a>() -> Parser<'a, u8, Expr> {
+    let bind = pattern::binding().map(Expr::Binding) - sym(b'|');
+    let expr = bind.repeat(0..) + call(pipe);
+    expr.map(|(binds, expr)| {
+        binds.into_iter().rev().fold(expr, |expr, binding| {
+            Expr::Binary(BinaryOp::Pipe, Box::from(binding), Box::from(expr))
+        })
+    })
 }
 
 fn pipe<'a>() -> Parser<'a, u8, Expr> {
     let pipe = sym(b'|').map(|_| BinaryOp::Pipe);
-    let expr = call(chain) + (pipe + call(chain)).repeat(0..);
+    let expr = call(chain) + (pipe + call(binding)).repeat(0..);
     expr.map(|(first, rest)| {
         rest.into_iter().fold(first, |lhs, (op, rhs)| {
             Expr::Binary(op, Box::from(lhs), Box::from(rhs))

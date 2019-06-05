@@ -1,14 +1,14 @@
 use pom::parser::*;
 
 use super::construct;
-use super::{pipe, terms, tokens};
+use super::{tokens, unary};
 use crate::ast::{ExprBinding, ExprPattern};
 
 pub fn pattern<'a>() -> Parser<'a, u8, ExprPattern> {
     let variable = tokens::variable().map(ExprPattern::Variable);
     let array = array();
     let table = table();
-    variable | array | table
+    tokens::space() * (variable | array | table) - tokens::space()
 }
 
 fn array<'a>() -> Parser<'a, u8, ExprPattern> {
@@ -22,8 +22,7 @@ fn table<'a>() -> Parser<'a, u8, ExprPattern> {
 }
 
 pub fn binding<'a>() -> Parser<'a, u8, Box<ExprBinding>> {
-    let as_keyword = tokens::space() + seq(b"as") + tokens::space();
-    (call(pipe) + (as_keyword * call(pattern)))
+    (call(unary) + (seq(b"as") * call(pattern)))
         .map(|(expr, pat)| ExprBinding::new(expr, pat))
         .map(Box::from)
 }
