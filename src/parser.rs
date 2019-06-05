@@ -27,7 +27,7 @@ fn expr<'a>() -> Parser<'a, u8, Expr> {
 }
 
 fn binding<'a>() -> Parser<'a, u8, Expr> {
-    let bind = pattern::binding().map(Expr::Binding) - sym(b'|');
+    let bind = pattern::binding().map(Box::from).map(Expr::Binding) - sym(b'|');
     let expr = bind.repeat(0..) + call(pipe);
     expr.map(|(binds, expr)| {
         binds.into_iter().rev().fold(expr, |expr, binding| {

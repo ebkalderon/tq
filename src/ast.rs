@@ -463,6 +463,17 @@ pub struct ExprForeach {
     extract: Expr,
 }
 
+impl ExprForeach {
+    pub fn new(binding: ExprBinding, init: Expr, update: Expr, extract: Expr) -> Self {
+        ExprForeach {
+            binding,
+            init,
+            update,
+            extract,
+        }
+    }
+}
+
 impl Display for ExprForeach {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         write!(

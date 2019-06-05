@@ -1,10 +1,22 @@
 use pom::parser::*;
 
-use super::expr;
-use crate::ast::{Expr, ExprIfElse, ExprTry};
+use super::{expr, pattern};
+use crate::ast::{Expr, ExprForeach, ExprIfElse, ExprTry};
 
 pub fn control_flow<'a>() -> Parser<'a, u8, Expr> {
-    if_else() | try_catch()
+    foreach() | if_else() | try_catch()
+}
+
+fn foreach<'a>() -> Parser<'a, u8, Expr> {
+    let bind = seq(b"foreach") * pattern::binding() - sym(b'(');
+    let init = call(expr) - sym(b';');
+    let update = call(expr) - sym(b';');
+    let extract = call(expr) - sym(b')');
+
+    let body = bind + init + update + extract;
+    body.map(|(((bind, init), update), extract)| ExprForeach::new(bind, init, update, extract))
+        .map(Box::from)
+        .map(Expr::Foreach)
 }
 
 fn if_else<'a>() -> Parser<'a, u8, Expr> {

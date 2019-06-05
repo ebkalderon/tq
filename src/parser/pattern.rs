@@ -21,8 +21,7 @@ fn table<'a>() -> Parser<'a, u8, ExprPattern> {
     (sym(b'{') * list(assign, sym(b',')) - sym(b'}')).map(ExprPattern::Table)
 }
 
-pub fn binding<'a>() -> Parser<'a, u8, Box<ExprBinding>> {
-    (call(unary) + (seq(b"as") * call(pattern)))
-        .map(|(expr, pat)| ExprBinding::new(expr, pat))
-        .map(Box::from)
+pub fn binding<'a>() -> Parser<'a, u8, ExprBinding> {
+    let bind = call(unary) + (seq(b"as") * call(pattern));
+    bind.map(|(expr, pat)| ExprBinding::new(expr, pat))
 }
