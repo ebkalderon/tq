@@ -96,7 +96,7 @@ pub enum Expr {
     /// `label $out | ... break $out ...`
     Break(Label),
 
-    /// `if A then B elif C else D end`
+    /// `if A then B elsif C else D end`
     IfElse(Box<ExprIfElse>),
     /// `reduce EXPR as $var (ACC; EVAL)`
     Reduce(Box<ExprReduce>),
@@ -436,7 +436,7 @@ impl Display for ExprIfElse {
 
         write!(
             fmt,
-            "if {} then {} {} else {} end",
+            "if {} then {} {}else {} end",
             main_cond, main_body, alts, self.fallback
         )
     }

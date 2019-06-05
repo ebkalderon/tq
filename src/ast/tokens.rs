@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter, Result as FmtResult};
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
 
 use toml::value::Datetime;
 
@@ -23,7 +23,7 @@ impl Display for Ident {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, PartialOrd)]
 pub struct IdentPath(Vec<Ident>);
 
 impl<T, U> From<U> for IdentPath
@@ -33,6 +33,14 @@ where
 {
     fn from(iter: U) -> Self {
         IdentPath(iter.into_iter().map(Into::into).collect())
+    }
+}
+
+impl Debug for IdentPath {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        fmt.debug_tuple(stringify!(IdentPath))
+            .field(&self.to_string())
+            .finish()
     }
 }
 
@@ -58,12 +66,20 @@ impl Display for Label {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Clone, PartialEq, PartialOrd)]
 pub struct Variable(Ident);
 
 impl<T: Into<Ident>> From<T> for Variable {
     fn from(ident: T) -> Self {
         Variable(ident.into())
+    }
+}
+
+impl Debug for Variable {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        fmt.debug_tuple(stringify!(Variable))
+            .field(&self.0.to_string())
+            .finish()
     }
 }
 
