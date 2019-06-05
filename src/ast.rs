@@ -200,8 +200,11 @@ impl Display for Filter {
             Filter::Identity => fmt.write_str("."),
             Filter::Recurse => fmt.write_str(".."),
             Filter::Field(ref ident) => write!(fmt, ".{}", ident),
-            Filter::Index(ref index) => write!(fmt, "{}", index),
-            Filter::Path(ref lhs, ref rhs) => write!(fmt, "{}{}", lhs, rhs),
+            Filter::Index(ref index) => write!(fmt, ".{}", index),
+            Filter::Path(ref lhs, ref rhs) => match **rhs {
+                Filter::Index(ref expr) => write!(fmt, "{}{}", lhs, expr),
+                _ => write!(fmt, "{}{}", lhs, rhs),
+            },
         }
     }
 }
