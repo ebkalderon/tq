@@ -2,6 +2,10 @@
 
 /// Construct a `tq::ast::Expr` from a `tq` filter literal.
 ///
+/// # Limitations
+///
+/// This macro can only parse very rudimentary filters due to limitations of `macro_rules` in Rust.
+///
 /// # Example
 ///
 /// ```rust,edition2018
