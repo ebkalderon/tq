@@ -25,6 +25,10 @@ macro_rules! tq {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! tq_expr_pipe {
+    ( $expr:tt as $($pat:tt)+ ) => {
+        Expr::Binding(Box::new(ExprBinding::new($crate::tq_expr!($expr), $crate::tq_pattern!($($pat)+))))
+    };
+
     ( $($exprs:tt)|+ ) => {
         {
             vec![$($crate::tq_expr!($exprs)),+]
@@ -42,6 +46,53 @@ macro_rules! tq_expr_pipe {
 
     ( $($exprs:tt)* ) => {
         $crate::tq_expr!($($exprs)*);
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! tq_table_key {
+    ( ($($expr:tt)+) ) => {
+        $crate::ast::TableKey::Expr($crate::tq_expr!($($expr)+))
+    };
+
+    ( $ident:ident ) => {
+        $crate::ast::TableKey::Field($crate::tq_token!($ident))
+    };
+
+    ( $literal:expr ) => {
+        $crate::ast::TableKey::Literal($crate::tq_token!($literal))
+    };
+
+    ( $($var:tt)+ ) => {
+        $crate::ast::TableKey::Variable($crate::tq_token!($($var)+))
+    };
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! tq_pattern {
+    ( [$($pat:tt)*] ) => {
+        ExprPattern::Array(vec![
+            $crate::tq_pattern!($($pat)*)
+        ])
+    };
+
+    ( { $($assign:tt)* } ) => {
+        ExprPattern::Table(vec![
+            $crate::tq_pattern!(@assign $($assign)*)
+        ])
+    };
+
+    (@assign $key:tt = $($value:tt)+) => {
+        (
+            $crate::tq_table_key!($key),
+            $crate::tq_pattern!($($value)+),
+        )
+    };
+
+    ( $($var:tt)+ ) => {
+        ExprPattern::Variable($crate::tq_token!($($var)+))
     };
 }
 
@@ -77,8 +128,13 @@ macro_rules! tq_expr {
     };
 
     // Field identifier.
-    ( $i:ident ) => {
-        Expr::Field($crate::tq_token!($i))
+    ( $ident:ident ) => {
+        Expr::Field($crate::tq_token!($ident))
+    };
+
+    // Variable.
+    ( $($var:tt)+ ) => {
+        Expr::Variable($crate::tq_token!($($var)+))
     };
 }
 
@@ -170,19 +226,23 @@ macro_rules! tq_filter {
 #[macro_export]
 macro_rules! tq_token {
     ( false ) => {
-        Literal::Boolean(false)
+        $crate::ast::tokens::Literal::Boolean(false)
     };
 
     ( true ) => {
-        Literal::Boolean(true)
+        $crate::ast::tokens::Literal::Boolean(true)
     };
 
     ( $ident:ident ) => {
-        Ident::from(stringify!($ident))
+        $crate::ast::tokens::Ident::from(stringify!($ident))
     };
 
-    ( $item:expr ) => {
-        Literal::from($item)
+    ( $literal:expr ) => {
+        $crate::ast::tokens::Literal::from($literal)
+    };
+
+    ( $($var:tt)+ ) => {
+        $crate::ast::tokens::Variable::from(concat!($(stringify!($var)),+))
     };
 }
 
@@ -206,7 +266,14 @@ macro_rules! tq_expr_and_str {
     ($($expr:tt)+) => {
         (
             $crate::tq!($($expr)+),
-            concat!($(stringify!($expr)),+)
+            stringify!($($expr)+)
+                .replace(" . ", ".")
+                .replace(". ", ".")
+                .replace(".as", ". as")
+                .replace("- ", "-")
+                .replace(" [", "[")
+                .replace(" ]", "]")
+                .replace("$ ", "$"),
         )
     };
 }
@@ -215,7 +282,7 @@ macro_rules! tq_expr_and_str {
 mod tests {
     #[test]
     fn define_filter() {
-        let identity = tq!(.foo.bar["hello"]);
+        let identity = tq!(. as { foo = $bar });
         println!("{:?}", identity);
     }
 }

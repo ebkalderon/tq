@@ -71,7 +71,9 @@ pub struct Variable(Ident);
 
 impl<T: Into<Ident>> From<T> for Variable {
     fn from(ident: T) -> Self {
-        Variable(ident.into())
+        let mut inner = ident.into();
+        inner.0 = inner.0.trim_start_matches("$").to_owned();
+        Variable(inner)
     }
 }
 
