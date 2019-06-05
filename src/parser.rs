@@ -152,10 +152,11 @@ fn index<'a>() -> Parser<'a, u8, Expr> {
 fn terms<'a>() -> Parser<'a, u8, Expr> {
     let paren = sym(b'(') * call(expr) - sym(b')');
     let control_flow = control_flow();
+    let empty = seq(b"empty").map(|_| Expr::Empty);
     let fn_call = function_call().map(Expr::FnCall);
     let filter = filter();
     let construct = construct();
     let literal = tokens::literal().map(Expr::Literal);
     let variable = tokens::variable().map(Expr::Variable);
-    paren | control_flow | fn_call | filter | construct | literal | variable
+    paren | control_flow | empty | fn_call | filter | construct | literal | variable
 }

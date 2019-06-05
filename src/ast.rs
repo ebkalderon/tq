@@ -48,6 +48,9 @@ pub struct StmtModule {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
+    /// `empty`
+    Empty,
+
     /// `12`, `+4.0`, `false`, `"foo"`, `'bar'`
     Literal(Literal),
     /// `$foo`
@@ -111,6 +114,7 @@ pub enum Expr {
 impl Display for Expr {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         match *self {
+            Expr::Empty => fmt.write_str("empty"),
             Expr::Literal(ref lit) => write!(fmt, "{}", lit),
             Expr::Variable(ref var) => write!(fmt, "{}", var),
             Expr::Array(ref inner) => {
