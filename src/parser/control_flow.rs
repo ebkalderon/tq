@@ -1,10 +1,10 @@
 use pom::parser::*;
 
 use super::{expr, pattern};
-use crate::ast::{Expr, ExprForeach, ExprIfElse, ExprTry};
+use crate::ast::{Expr, ExprForeach, ExprIfElse, ExprReduce, ExprTry};
 
 pub fn control_flow<'a>() -> Parser<'a, u8, Expr> {
-    foreach() | if_else() | try_catch()
+    foreach() | if_else() | reduce() | try_catch()
 }
 
 fn foreach<'a>() -> Parser<'a, u8, Expr> {
@@ -28,6 +28,17 @@ fn if_else<'a>() -> Parser<'a, u8, Expr> {
         .map(|((main, alt), f)| ExprIfElse::new(main, alt, f))
         .map(Box::from)
         .map(Expr::IfElse)
+}
+
+fn reduce<'a>() -> Parser<'a, u8, Expr> {
+    let bind = seq(b"reduce") * pattern::binding() - sym(b'(');
+    let acc = call(expr) - sym(b';');
+    let eval = call(expr) - sym(b')');
+
+    let body = bind + acc + eval;
+    body.map(|((bind, acc), eval)| ExprReduce::new(bind, acc, eval))
+        .map(Box::from)
+        .map(Expr::Reduce)
 }
 
 fn try_catch<'a>() -> Parser<'a, u8, Expr> {

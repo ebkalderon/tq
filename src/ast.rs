@@ -453,6 +453,12 @@ pub struct ExprReduce {
     eval: Expr,
 }
 
+impl ExprReduce {
+    pub fn new(binding: ExprBinding, acc: Expr, eval: Expr) -> Self {
+        ExprReduce { binding, acc, eval }
+    }
+}
+
 impl Display for ExprReduce {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         write!(fmt, "reduce {} ({}; {})", self.binding, self.acc, self.eval)
