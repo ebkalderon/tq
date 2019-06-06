@@ -7,7 +7,7 @@ use crate::ast::{ExprFnCall, ExprFnDecl};
 
 pub fn function_decl<'a>() -> Parser<'a, u8, ExprFnDecl> {
     let name = tokens::space() * (seq(b"def ") * tokens::ident_path());
-    let param = || tokens::fn_param();
+    let param = || tokens::space() * tokens::fn_param() - tokens::space();
     let params = optional_arg_sequence(param) - sym(b':');
     let body = call(expr) - sym(b';');
     (name + params + body).map(|((name, args), body)| ExprFnDecl::new(name, args, body))
