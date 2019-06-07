@@ -134,12 +134,7 @@ impl Display for Expr {
                 write!(fmt, "{{{}}}", table.join(", "))
             }
 
-            Expr::Unary(ref op, ref expr) => match **expr {
-                Expr::Assign(_, _) | Expr::AssignOp(_, _, _) | Expr::Binary(_, _, _) => {
-                    write!(fmt, "{}({})", op, expr)
-                }
-                _ => write!(fmt, "{}{}", op, expr),
-            },
+            Expr::Unary(ref op, ref expr) => write!(fmt, "{}{}", op, expr),
             Expr::Binary(ref op, ref lhs, ref rhs) => match op {
                 BinaryOp::And | BinaryOp::Or | BinaryOp::Comma => {
                     write!(fmt, "{}{} {}", lhs, op, rhs)
@@ -150,12 +145,7 @@ impl Display for Expr {
             Expr::AssignOp(ref op, ref lhs, ref rhs) => write!(fmt, "{} {}= {}", lhs, op, rhs),
 
             Expr::Filter(ref filter) => write!(fmt, "{}", filter),
-            Expr::Index(ref expr, ref index) => match **expr {
-                Expr::Assign(_, _) | Expr::AssignOp(_, _, _) | Expr::Binary(_, _, _) => {
-                    write!(fmt, "({}){}", expr, index)
-                }
-                _ => write!(fmt, "{}{}", expr, index),
-            },
+            Expr::Index(ref expr, ref index) => write!(fmt, "{}{}", expr, index),
             Expr::Binding(ref binding) => write!(fmt, "{}", binding),
 
             Expr::FnDecl(ref decl, ref expr) => write!(fmt, "{} {}", decl, expr),
@@ -313,12 +303,7 @@ impl ExprBinding {
 
 impl Display for ExprBinding {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
-        match self.expr {
-            Expr::Assign(_, _) | Expr::AssignOp(_, _, _) | Expr::Binary(_, _, _) => {
-                write!(fmt, "({}) as {}", self.expr, self.pattern)
-            }
-            _ => write!(fmt, "{} as {}", self.expr, self.pattern),
-        }
+        write!(fmt, "{} as {}", self.expr, self.pattern)
     }
 }
 
@@ -530,12 +515,7 @@ impl Display for ExprTry {
         if let Some(ref catch) = &self.fallback {
             write!(fmt, "try {} catch {}", self.expr, catch)
         } else {
-            match self.expr {
-                Expr::Assign(_, _) | Expr::AssignOp(_, _, _) | Expr::Binary(_, _, _) => {
-                    write!(fmt, "({})?", self.expr)
-                }
-                _ => write!(fmt, "{}?", self.expr),
-            }
+            write!(fmt, "{}?", self.expr)
         }
     }
 }
