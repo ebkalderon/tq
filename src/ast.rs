@@ -130,16 +130,25 @@ impl Display for Expr {
             }
 
             Expr::Unary(ref op, ref expr) => match **expr {
-                Expr::Binary(_, _, _) => write!(fmt, "{}({})", op, expr),
+                Expr::Assign(_, _) | Expr::AssignOp(_, _, _) | Expr::Binary(_, _, _) => {
+                    write!(fmt, "{}({})", op, expr)
+                }
                 _ => write!(fmt, "{}{}", op, expr),
             },
-            Expr::Binary(ref op, ref lhs, ref rhs) => write!(fmt, "{}{}{}", lhs, op, rhs),
+            Expr::Binary(ref op, ref lhs, ref rhs) => match op {
+                BinaryOp::And | BinaryOp::Or | BinaryOp::Comma => {
+                    write!(fmt, "{}{} {}", lhs, op, rhs)
+                }
+                op => write!(fmt, "{} {} {}", lhs, op, rhs),
+            },
             Expr::Assign(ref lhs, ref rhs) => write!(fmt, "{} = {}", lhs, rhs),
             Expr::AssignOp(ref op, ref lhs, ref rhs) => write!(fmt, "{} {}= {}", lhs, op, rhs),
 
             Expr::Filter(ref filter) => write!(fmt, "{}", filter),
             Expr::Index(ref expr, ref index) => match **expr {
-                Expr::Binary(_, _, _) => write!(fmt, "({}){}", expr, index),
+                Expr::Assign(_, _) | Expr::AssignOp(_, _, _) | Expr::Binary(_, _, _) => {
+                    write!(fmt, "({}){}", expr, index)
+                }
                 _ => write!(fmt, "{}{}", expr, index),
             },
             Expr::Binding(ref binding) => write!(fmt, "{}", binding),
@@ -265,22 +274,22 @@ pub enum BinaryOp {
 impl Display for BinaryOp {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         match *self {
-            BinaryOp::Add => fmt.write_str(" + "),
-            BinaryOp::Sub => fmt.write_str(" - "),
-            BinaryOp::Mul => fmt.write_str(" * "),
-            BinaryOp::Div => fmt.write_str(" / "),
-            BinaryOp::Mod => fmt.write_str(" % "),
-            BinaryOp::Eq => fmt.write_str(" == "),
-            BinaryOp::NotEq => fmt.write_str(" != "),
-            BinaryOp::LessThan => fmt.write_str(" < "),
-            BinaryOp::LessThanEq => fmt.write_str(" <= "),
-            BinaryOp::GreaterThan => fmt.write_str(" > "),
-            BinaryOp::GreaterThanEq => fmt.write_str(" >= "),
-            BinaryOp::And => fmt.write_str(" and "),
-            BinaryOp::Or => fmt.write_str(" or "),
-            BinaryOp::Alt => fmt.write_str(" // "),
-            BinaryOp::Comma => fmt.write_str(", "),
-            BinaryOp::Pipe => fmt.write_str(" | "),
+            BinaryOp::Add => fmt.write_str("+"),
+            BinaryOp::Sub => fmt.write_str("-"),
+            BinaryOp::Mul => fmt.write_str("*"),
+            BinaryOp::Div => fmt.write_str("/"),
+            BinaryOp::Mod => fmt.write_str("%"),
+            BinaryOp::Eq => fmt.write_str("=="),
+            BinaryOp::NotEq => fmt.write_str("!="),
+            BinaryOp::LessThan => fmt.write_str("<"),
+            BinaryOp::LessThanEq => fmt.write_str("<="),
+            BinaryOp::GreaterThan => fmt.write_str(">"),
+            BinaryOp::GreaterThanEq => fmt.write_str(">="),
+            BinaryOp::And => fmt.write_str("and"),
+            BinaryOp::Or => fmt.write_str("or"),
+            BinaryOp::Alt => fmt.write_str("//"),
+            BinaryOp::Comma => fmt.write_str(","),
+            BinaryOp::Pipe => fmt.write_str("|"),
         }
     }
 }
@@ -300,7 +309,9 @@ impl ExprBinding {
 impl Display for ExprBinding {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         match self.expr {
-            Expr::Binary(_, _, _) => write!(fmt, "({}) as {}", self.expr, self.pattern),
+            Expr::Assign(_, _) | Expr::AssignOp(_, _, _) | Expr::Binary(_, _, _) => {
+                write!(fmt, "({}) as {}", self.expr, self.pattern)
+            }
             _ => write!(fmt, "{} as {}", self.expr, self.pattern),
         }
     }
@@ -515,7 +526,9 @@ impl Display for ExprTry {
             write!(fmt, "try {} catch {}", self.expr, catch)
         } else {
             match self.expr {
-                Expr::Binary(_, _, _) => write!(fmt, "({})?", self.expr),
+                Expr::Assign(_, _) | Expr::AssignOp(_, _, _) | Expr::Binary(_, _, _) => {
+                    write!(fmt, "({})?", self.expr)
+                }
                 _ => write!(fmt, "{}?", self.expr),
             }
         }
