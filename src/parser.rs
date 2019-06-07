@@ -169,7 +169,7 @@ fn index<'a>() -> Parser<'a, u8, Expr> {
 }
 
 fn terms<'a>() -> Parser<'a, u8, Expr> {
-    let paren = sym(b'(') * call(expr) - sym(b')');
+    let paren = sym(b'(') * call(expr).map(Box::from).map(Expr::Paren) - sym(b')');
     let control_flow = control_flow();
     let empty = seq(b"empty").map(|_| Expr::Empty);
     let fn_call = function_call().map(Expr::FnCall);

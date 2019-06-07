@@ -48,9 +48,13 @@ pub struct StmtModule {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum Expr {
+    /// A parenthesized expression.
+    ///
+    /// This type of expression is only used to aid with serialization of the AST back into a token
+    /// string.
+    Paren(Box<Expr>),
     /// `empty`
     Empty,
-
     /// `12`, `+4.0`, `false`, `"foo"`, `'bar'`
     Literal(Literal),
     /// `$foo`
@@ -114,6 +118,7 @@ pub enum Expr {
 impl Display for Expr {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         match *self {
+            Expr::Paren(ref expr) => write!(fmt, "({})", expr),
             Expr::Empty => fmt.write_str("empty"),
             Expr::Literal(ref lit) => write!(fmt, "{}", lit),
             Expr::Variable(ref var) => write!(fmt, "{}", var),
