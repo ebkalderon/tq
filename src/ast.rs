@@ -79,7 +79,7 @@ pub enum Expr {
     /// `.dependencies.log`
     /// `.dependencies["log"]`
     /// `.dependencies[]`
-    Filter(Box<Filter>),
+    Filter(Box<ExprFilter>),
     /// `my_func(. + 1)[0]`
     /// `"hello world"[4:]`
     /// `[1, 2, 3][1:2]`
@@ -182,7 +182,7 @@ impl Display for TableKey {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum Filter {
+pub enum ExprFilter {
     /// `.`
     Identity,
     /// `..`
@@ -195,18 +195,18 @@ pub enum Filter {
     /// `.foo["hello"]`
     Index(Box<ExprIndex>),
     /// `.foo.bar["baz"][]`
-    Path(Box<Filter>, Box<Filter>),
+    Path(Box<ExprFilter>, Box<ExprFilter>),
 }
 
-impl Display for Filter {
+impl Display for ExprFilter {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
         match *self {
-            Filter::Identity => fmt.write_str("."),
-            Filter::Recurse => fmt.write_str(".."),
-            Filter::Field(ref ident) => write!(fmt, ".{}", ident),
-            Filter::Index(ref index) => write!(fmt, ".{}", index),
-            Filter::Path(ref lhs, ref rhs) => match **rhs {
-                Filter::Index(ref expr) => write!(fmt, "{}{}", lhs, expr),
+            ExprFilter::Identity => fmt.write_str("."),
+            ExprFilter::Recurse => fmt.write_str(".."),
+            ExprFilter::Field(ref ident) => write!(fmt, ".{}", ident),
+            ExprFilter::Index(ref index) => write!(fmt, ".{}", index),
+            ExprFilter::Path(ref lhs, ref rhs) => match **rhs {
+                ExprFilter::Index(ref expr) => write!(fmt, "{}{}", lhs, expr),
                 _ => write!(fmt, "{}{}", lhs, rhs),
             },
         }

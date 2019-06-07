@@ -171,29 +171,29 @@ macro_rules! tq_expr_index {
 macro_rules! tq_filter {
     // Identity filter literal.
     (.) => {
-        Filter::Identity
+        ExprFilter::Identity
     };
 
     // Recurse filter literal.
     (..) => {
-        Filter::Recurse
+        ExprFilter::Recurse
     };
 
     // Single field path.
     ( .$field:ident ) => {
-        Filter::Field($crate::tq_token!($field))
+        ExprFilter::Field($crate::tq_token!($field))
     };
 
     // Single slice path.
     ( .[$($expr:tt)*] ) => {
-        Filter::Index(Box::new($crate::tq_expr_index!($($expr)*)))
+        ExprFilter::Index(Box::new($crate::tq_expr_index!($($expr)*)))
     };
 
     // Nested path beginning with an identifier-style field access.
     ( .$field:ident $($rest:tt)+ ) => {
         $crate::tq_filter!(@path $($rest)+)
             .fold($crate::tq_filter!(.$field), |seq, next| {
-                Filter::Path(Box::new(seq), Box::new(next))
+                ExprFilter::Path(Box::new(seq), Box::new(next))
             })
     };
 
@@ -201,7 +201,7 @@ macro_rules! tq_filter {
     ( .[$($expr:tt)*] $($rest:tt)+ ) => {
         $crate::tq_filter!(@path $($rest)+)
             .fold($crate::tq_filter!(.[$($expr)*]), |seq, next| {
-                Filter::Path(Box::new(seq), Box::new(next))
+                ExprFilter::Path(Box::new(seq), Box::new(next))
             })
     };
 
@@ -261,7 +261,7 @@ macro_rules! tq_token {
 /// # use tq::ast::{Expr, Filter};
 /// #
 /// let (expr, s) = tq_expr_and_str!(.);
-/// assert_eq!(expr, Expr::Filter(Filter::Identity));
+/// assert_eq!(expr, Expr::Filter(ExprFilter::Identity));
 /// assert_eq!(s, ".");
 /// ```
 #[cfg(test)]
