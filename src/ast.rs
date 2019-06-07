@@ -8,17 +8,26 @@ pub mod tokens;
 mod macros;
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct Filter {
+    stmts: Vec<Stmt>,
+    expr: Expr,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Module {
+    metadata: Option<Expr>,
+    stmts: Vec<Stmt>,
+    decls: Vec<ExprFnDecl>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum Stmt {
-    /// `import "my_tq_module" as FOO;`
+    /// `import "./path/to/tq/module" as FOO;`
     ImportMod(StmtImportMod),
     /// `import "./path/to/toml" as $FOO;`
     ImportToml(StmtImportToml),
     /// `include "./path/to/tq/module";`
     Include(StmtInclude),
-    /// `module "foo";`
-    Module(StmtModule),
-    /// An expression (must occur at the end of the filter).
-    Expr(Expr),
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -39,11 +48,6 @@ pub struct StmtImportToml {
 pub struct StmtInclude {
     file: PathBuf,
     metadata: Option<Expr>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct StmtModule {
-    metadata: Expr,
 }
 
 #[derive(Clone, Debug, PartialEq)]
