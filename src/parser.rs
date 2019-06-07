@@ -57,11 +57,31 @@ fn chain<'a>() -> Parser<'a, u8, Expr> {
 }
 
 fn fn_decl<'a>() -> Parser<'a, u8, Expr> {
-    let expr = function_decl().repeat(0..) + call(logical);
+    let expr = function_decl().repeat(0..) + call(assign_op);
     expr.map(|(decls, expr)| {
         decls.into_iter().fold(expr, |expr, decl| {
             Expr::FnDecl(Box::new(decl), Box::new(expr))
         })
+    })
+}
+
+fn assign_op<'a>() -> Parser<'a, u8, Expr> {
+    let alt = seq(b"//").map(|_| BinaryOp::Alt);
+    let pipe = sym(b'|').map(|_| BinaryOp::Pipe);
+    let stream = alt | pipe;
+
+    let add = sym(b'+').map(|_| BinaryOp::Add);
+    let sub = sym(b'-').map(|_| BinaryOp::Sub);
+    let mul = sym(b'*').map(|_| BinaryOp::Mul);
+    let div = sym(b'/').map(|_| BinaryOp::Div);
+    let rem = sym(b'%').map(|_| BinaryOp::Mod);
+    let arithmetic = add | sub | mul | div | rem;
+
+    let expr = call(logical) + ((stream | arithmetic).opt() + (sym(b'=') * call(logical))).opt();
+    expr.map(|(expr, assign)| match assign {
+        Some((Some(op), rhs)) => Expr::AssignOp(op, Box::new(expr), Box::new(rhs)),
+        Some((None, rhs)) => Expr::Assign(Box::new(expr), Box::new(rhs)),
+        None => expr,
     })
 }
 
@@ -87,11 +107,10 @@ fn compare<'a>() -> Parser<'a, u8, Expr> {
     let gt = sym(b'>').map(|_| BinaryOp::LessThan);
     let comparison = lte | lt | gte | gt;
 
-    let expr = call(sum) + ((equality | comparison) + call(sum)).repeat(0..);
-    expr.map(|(first, rest)| {
-        rest.into_iter().fold(first, |lhs, (op, rhs)| {
-            Expr::Binary(op, Box::from(lhs), Box::from(rhs))
-        })
+    let expr = call(sum) + ((equality | comparison) + call(sum)).opt();
+    expr.map(|(expr, cmp)| match cmp {
+        Some((op, rhs)) => Expr::Binary(op, Box::from(expr), Box::from(rhs)),
+        None => expr,
     })
 }
 
