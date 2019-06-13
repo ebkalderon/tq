@@ -54,9 +54,9 @@ impl Display for IdentPath {
 #[derive(Clone, Debug, PartialEq, PartialOrd)]
 pub struct Label(Variable);
 
-impl<T: Into<Ident>> From<T> for Label {
-    fn from(ident: T) -> Self {
-        Label(Variable::from(ident))
+impl<T: Into<Variable>> From<T> for Label {
+    fn from(variable: T) -> Self {
+        Label(variable.into())
     }
 }
 

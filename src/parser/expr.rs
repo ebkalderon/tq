@@ -7,6 +7,7 @@ use self::control_flow::control_flow;
 use self::filter::filter;
 use self::function::function_call;
 use self::index::index_slice;
+use self::label::{label_break, label_decl};
 use super::tokens;
 use crate::ast::*;
 
@@ -15,6 +16,7 @@ mod control_flow;
 mod filter;
 mod function;
 mod index;
+mod label;
 mod pattern;
 
 pub fn expr<'a>() -> Parser<'a, u8, Expr> {
@@ -23,10 +25,20 @@ pub fn expr<'a>() -> Parser<'a, u8, Expr> {
 
 fn binding<'a>() -> Parser<'a, u8, Expr> {
     let bind = pattern::binding().map(Box::from).map(Expr::Binding) - sym(b'|');
-    let expr = bind.repeat(0..) + call(pipe);
+    let expr = bind.repeat(0..) + call(label);
     expr.map(|(binds, expr)| {
         binds.into_iter().rev().fold(expr, |expr, binding| {
             Expr::Binary(BinaryOp::Pipe, Box::from(binding), Box::from(expr))
+        })
+    })
+}
+
+fn label<'a>() -> Parser<'a, u8, Expr> {
+    let label = label_decl().map(Expr::Label) - sym(b'|');
+    let expr = label.repeat(0..) + call(pipe);
+    expr.map(|(labels, expr)| {
+        labels.into_iter().rev().fold(expr, |expr, label| {
+            Expr::Binary(BinaryOp::Pipe, Box::from(label), Box::from(expr))
         })
     })
 }
@@ -166,11 +178,12 @@ fn index<'a>() -> Parser<'a, u8, Expr> {
 fn terms<'a>() -> Parser<'a, u8, Expr> {
     let paren = sym(b'(') * call(expr).map(Box::from).map(Expr::Paren) - sym(b')');
     let control_flow = control_flow();
+    let label_break = label_break().map(Expr::Break);
     let empty = seq(b"empty").map(|_| Expr::Empty);
     let fn_call = function_call().map(Expr::FnCall);
     let filter = filter();
     let construct = construct();
     let literal = tokens::literal().map(Expr::Literal);
     let variable = tokens::variable().map(Expr::Variable);
-    paren | control_flow | empty | fn_call | filter | construct | literal | variable
+    paren | control_flow | label_break | empty | fn_call | filter | construct | literal | variable
 }
