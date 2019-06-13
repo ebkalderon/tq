@@ -245,9 +245,7 @@ impl Display for Expr {
 
             Expr::Unary(ref op, ref expr) => write!(fmt, "{}{}", op, expr),
             Expr::Binary(ref op, ref lhs, ref rhs) => match op {
-                BinaryOp::And | BinaryOp::Or | BinaryOp::Comma => {
-                    write!(fmt, "{}{} {}", lhs, op, rhs)
-                }
+                BinaryOp::Comma => write!(fmt, "{}{} {}", lhs, op, rhs),
                 op => write!(fmt, "{} {} {}", lhs, op, rhs),
             },
             Expr::Assign(ref lhs, ref rhs) => write!(fmt, "{} = {}", lhs, rhs),
