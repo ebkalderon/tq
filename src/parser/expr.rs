@@ -20,7 +20,16 @@ mod label;
 mod pattern;
 
 pub fn expr<'a>() -> Parser<'a, u8, Expr> {
-    binding()
+    fn_decl()
+}
+
+fn fn_decl<'a>() -> Parser<'a, u8, Expr> {
+    let expr = function_decl().repeat(0..) + call(binding);
+    expr.map(|(decls, expr)| {
+        decls.into_iter().fold(expr, |expr, decl| {
+            Expr::FnDecl(Box::new(decl), Box::new(expr))
+        })
+    })
 }
 
 fn binding<'a>() -> Parser<'a, u8, Expr> {
@@ -55,19 +64,10 @@ fn pipe<'a>() -> Parser<'a, u8, Expr> {
 
 fn chain<'a>() -> Parser<'a, u8, Expr> {
     let comma = sym(b',').map(|_| BinaryOp::Comma);
-    let expr = call(fn_decl) + (comma + call(fn_decl)).repeat(0..);
+    let expr = call(assign_op) + (comma + call(assign_op)).repeat(0..);
     expr.map(|(first, rest)| {
         rest.into_iter().fold(first, |lhs, (op, rhs)| {
             Expr::Binary(op, Box::from(lhs), Box::from(rhs))
-        })
-    })
-}
-
-fn fn_decl<'a>() -> Parser<'a, u8, Expr> {
-    let expr = function_decl().repeat(0..) + call(assign_op);
-    expr.map(|(decls, expr)| {
-        decls.into_iter().fold(expr, |expr, decl| {
-            Expr::FnDecl(Box::new(decl), Box::new(expr))
         })
     })
 }
@@ -168,10 +168,11 @@ fn index<'a>() -> Parser<'a, u8, Expr> {
     let iter = (sym(b'[') + tokens::space() + sym(b']')).map(|_| ExprIndex::Iter);
     let exact = (sym(b'[') * call(expr) - sym(b']')).map(ExprIndex::Exact);
     let slice = index_slice().map(ExprIndex::Slice);
-    let expr = call(terms) + (iter | exact | slice).opt();
-    expr.map(|(term, index)| match index {
-        Some(index) => Expr::Index(Box::from(term), Box::from(index)),
-        None => term,
+    let expr = call(terms) + (iter | exact | slice).repeat(0..);
+    expr.map(|(term, indices)| {
+        indices.into_iter().fold(term, |expr, index| {
+            Expr::Index(Box::from(expr), Box::from(index))
+        })
     })
 }
 
