@@ -4,7 +4,7 @@ use std::path::PathBuf;
 use std::process;
 
 use structopt::StructOpt;
-use tq::parser::parse_filter;
+use tq::ast::Filter;
 
 #[derive(Debug, StructOpt)]
 struct Opt {
@@ -24,13 +24,10 @@ fn read_filter(s: &str) -> String {
 
 fn main() {
     let opt = Opt::from_args();
-    let filter = match parse_filter(&opt.filter) {
-        Ok(filter) => filter,
-        Err(err) => {
-            eprintln!("{}", err);
-            process::exit(1);
-        }
-    };
+    let filter: Filter = opt.filter.parse().unwrap_or_else(|err| {
+        eprintln!("{}", err);
+        process::exit(1);
+    });
 
     println!("AST: {}", filter);
     println!("Serialized: {:?}", filter);
