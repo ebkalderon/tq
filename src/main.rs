@@ -1,71 +1,34 @@
 #![forbid(unsafe_code)]
 
-use std::fs;
 use std::path::PathBuf;
+use std::process;
 
-use env_logger;
-use failure::Fail;
-use log::{info, log, LevelFilter};
 use structopt::StructOpt;
-
-use tq::FilterParser;
-
-#[derive(Debug, Fail)]
-pub enum Error {
-    #[fail(display = "parse error")]
-    Parse,
-    #[fail(display = "syntax error")]
-    Syntax,
-}
+use tq::ast::Filter;
 
 #[derive(Debug, StructOpt)]
-#[structopt(name = "tq", about = "command-line TOML processor")]
 struct Opt {
-    /// Use verbose output
-    #[structopt(short = "v", long = "verbose", parse(from_occurrences))]
-    verbosity: u8,
-    #[structopt(short = "r", long = "read", parse(from_os_str))]
-    read: Option<PathBuf>,
-    /// Filter to apply to the TOML stream
-    filter: String,
+    #[structopt(default_value = ".", parse(from_str = "filter_or_default"))]
+    pub filter: String,
+    #[structopt(default_value = "Vec::new")]
+    pub files: Vec<PathBuf>,
+}
+
+fn filter_or_default(s: &str) -> String {
+    if s.is_empty() {
+        ".".to_string()
+    } else {
+        s.to_string()
+    }
 }
 
 fn main() {
     let opt = Opt::from_args();
-    let verbosity = match opt.verbosity {
-        0 => None,
-        1 => Some(LevelFilter::Error),
-        2 => Some(LevelFilter::Warn),
-        3 => Some(LevelFilter::Info),
-        4 => Some(LevelFilter::Debug),
-        _ => Some(LevelFilter::Trace),
-    };
+    let filter: Filter = opt.filter.parse().unwrap_or_else(|err| {
+        eprintln!("{}", err);
+        process::exit(1);
+    });
 
-    let mut logger = env_logger::Builder::from_default_env();
-    if let Some(level) = verbosity {
-        logger.filter_level(level);
-    }
-    logger.init();
-
-    info!("detected the following options: {:?}", opt);
-
-    let _toml: String = match opt.read {
-        Some(ref path) => fs::read_to_string(path).unwrap(),
-        None => {
-            use std::io::{self, Read};
-            let mut lines = String::new();
-            let stdin = io::stdin();
-            stdin.lock().read_to_string(&mut lines).unwrap();
-            lines
-        }
-    };
-
-    let filter = FilterParser::new().parse(&opt.filter).unwrap();
-    println!("{:#?}", filter);
-
-    // compile
-    //
-    // load
-    //
-    // run
+    println!("AST: {:?}", filter);
+    println!("Serialized: {}", filter);
 }
