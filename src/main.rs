@@ -8,13 +8,13 @@ use tq::ast::Filter;
 
 #[derive(Debug, StructOpt)]
 struct Opt {
-    #[structopt(default_value = ".", parse(from_str = "read_filter"))]
+    #[structopt(default_value = ".", parse(from_str = "filter_or_default"))]
     pub filter: String,
     #[structopt(default_value = "Vec::new")]
     pub files: Vec<PathBuf>,
 }
 
-fn read_filter(s: &str) -> String {
+fn filter_or_default(s: &str) -> String {
     if s.is_empty() {
         ".".to_string()
     } else {
@@ -29,6 +29,6 @@ fn main() {
         process::exit(1);
     });
 
-    println!("AST: {}", filter);
-    println!("Serialized: {:?}", filter);
+    println!("AST: {:?}", filter);
+    println!("Serialized: {}", filter);
 }
