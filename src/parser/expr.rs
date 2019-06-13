@@ -54,7 +54,7 @@ fn label<'a>() -> Parser<'a, u8, Expr> {
 
 fn pipe<'a>() -> Parser<'a, u8, Expr> {
     let pipe = sym(b'|').map(|_| BinaryOp::Pipe);
-    let expr = call(chain) + (pipe + call(binding)).repeat(0..);
+    let expr = call(chain) + (pipe + call(fn_decl)).repeat(0..);
     expr.map(|(first, rest)| {
         rest.into_iter().fold(first, |lhs, (op, rhs)| {
             Expr::Binary(op, Box::from(lhs), Box::from(rhs))
