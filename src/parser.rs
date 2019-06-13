@@ -23,13 +23,13 @@ impl FromStr for Filter {
 }
 
 pub fn parse_filter<S: AsRef<str>>(filter: S) -> Result<Filter, FilterError> {
-    let s = filter.as_ref();
+    let text = filter.as_ref();
     let stmts = stmt().repeat(0..);
     let expr = expr();
     (stmts + expr - end())
         .map(|(stmts, expr)| Filter::new(stmts, expr))
-        .parse(s.as_bytes())
-        .map_err(|e| FilterError::new(e, s))
+        .parse(text.as_bytes())
+        .map_err(|e| FilterError::new(e, text))
 }
 
 impl FromStr for Module {
