@@ -1,3 +1,5 @@
+pub use self::error::FilterError;
+
 use std::str;
 
 use pom::parser::*;
@@ -7,16 +9,18 @@ use self::expr::{expr, function_decl};
 use self::stmt::stmt;
 use crate::ast::{Filter, Module};
 
+mod error;
 mod expr;
 mod stmt;
 mod tokens;
 
-pub fn parse_filter(filter: &str) -> Result<Filter, ParseError> {
+pub fn parse_filter(filter: &str) -> Result<Filter, FilterError> {
     let stmts = stmt().repeat(0..);
     let expr = expr();
     (stmts + expr - end())
         .map(|(stmts, expr)| Filter::new(stmts, expr))
         .parse(filter.as_bytes())
+        .map_err(|e| FilterError::new(e, filter))
 }
 
 pub fn parse_module(module: &str) -> Result<Module, ParseError> {
