@@ -1,7 +1,7 @@
 use pom::parser::*;
 
 use super::index::index;
-use super::tokens::identifier;
+use super::tokens::{identifier, variable};
 use crate::ast::{Expr, ExprFilter};
 
 pub fn filter<'a>() -> Parser<'a, u8, Expr> {
@@ -9,7 +9,7 @@ pub fn filter<'a>() -> Parser<'a, u8, Expr> {
     let recurse = seq(b"..").map(|_| ExprFilter::Recurse);
 
     let first = field() | (sym(b'.') * index().map(ExprFilter::Index));
-    let segments = first + (field() | index().map(ExprFilter::Index)).repeat(0..);
+    let segments = first_segment(first) + (field() | index().map(ExprFilter::Index)).repeat(0..);
     let path = segments.map(|(first, rest)| {
         rest.into_iter().fold(first, |prev, next| {
             ExprFilter::Path(Box::new(prev), Box::new(next))
@@ -17,6 +17,15 @@ pub fn filter<'a>() -> Parser<'a, u8, Expr> {
     });
 
     (recurse | path | identity).map(|e| Expr::Filter(Box::new(e)))
+}
+
+fn first_segment<'a>(filter: Parser<'a, u8, ExprFilter>) -> Parser<'a, u8, ExprFilter> {
+    let opt_prefix = variable().map(ExprFilter::Variable).opt();
+    let first = opt_prefix + filter;
+    first.map(|(prefix, filter)| match prefix {
+        Some(prefix) => ExprFilter::Path(Box::new(prefix), Box::new(filter)),
+        None => filter,
+    })
 }
 
 fn field<'a>() -> Parser<'a, u8, ExprFilter> {

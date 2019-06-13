@@ -299,6 +299,8 @@ pub enum ExprFilter {
 
     /// `foo`
     Field(Ident),
+    /// `$blah`
+    Variable(Variable),
     /// `.foo[1]`
     /// `.foo[2:5]`
     /// `.foo["hello"]`
@@ -313,6 +315,7 @@ impl Display for ExprFilter {
             ExprFilter::Identity => fmt.write_str("."),
             ExprFilter::Recurse => fmt.write_str(".."),
             ExprFilter::Field(ref ident) => write!(fmt, ".{}", ident),
+            ExprFilter::Variable(ref var) => write!(fmt, "{}", var),
             ExprFilter::Index(ref index) => write!(fmt, ".{}", index),
             ExprFilter::Path(ref lhs, ref rhs) => match **rhs {
                 ExprFilter::Index(ref expr) => write!(fmt, "{}{}", lhs, expr),
