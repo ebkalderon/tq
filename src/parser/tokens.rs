@@ -1,4 +1,4 @@
-pub use self::literal::literal;
+pub use self::literal::{literal, string};
 
 use std::iter;
 

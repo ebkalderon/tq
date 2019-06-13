@@ -37,6 +37,16 @@ pub struct StmtImportMod {
     metadata: Option<Expr>,
 }
 
+impl StmtImportMod {
+    pub fn new(file: PathBuf, path: IdentPath, metadata: Option<Expr>) -> Self {
+        StmtImportMod {
+            file,
+            path,
+            metadata,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct StmtImportToml {
     file: PathBuf,
@@ -44,10 +54,26 @@ pub struct StmtImportToml {
     metadata: Option<Expr>,
 }
 
+impl StmtImportToml {
+    pub fn new(file: PathBuf, variable: Variable, metadata: Option<Expr>) -> Self {
+        StmtImportToml {
+            file,
+            variable,
+            metadata,
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct StmtInclude {
     file: PathBuf,
     metadata: Option<Expr>,
+}
+
+impl StmtInclude {
+    pub fn new(file: PathBuf, metadata: Option<Expr>) -> Self {
+        StmtInclude { file, metadata }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
