@@ -212,7 +212,7 @@ pub enum Expr {
     /// `label $out | ... break $out ...`
     Break(Label),
 
-    /// `if A then B elsif C else D end`
+    /// `if A then B elif C else D end`
     IfElse(Box<ExprIfElse>),
     /// `reduce EXPR as $var (ACC; EVAL)`
     Reduce(Box<ExprReduce>),
@@ -548,7 +548,7 @@ impl Display for ExprIfElse {
         let alts: String = self
             .alt_clauses
             .iter()
-            .map(|(cond, body)| format!("elsif {} then {} ", cond, body))
+            .map(|(cond, body)| format!("elif {} then {} ", cond, body))
             .collect();
 
         write!(
