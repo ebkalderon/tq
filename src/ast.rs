@@ -13,11 +13,47 @@ pub struct Filter {
     expr: Expr,
 }
 
+impl Filter {
+    pub fn new(stmts: Vec<Stmt>, expr: Expr) -> Self {
+        Filter { stmts, expr }
+    }
+}
+
+impl Display for Filter {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        let stmts: String = self.stmts.iter().map(|s| format!("{} ", s)).collect();
+        write!(fmt, "{}{}", stmts, self.expr)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module {
     metadata: Option<Expr>,
     stmts: Vec<Stmt>,
     decls: Vec<ExprFnDecl>,
+}
+
+impl Module {
+    pub fn new(metadata: Option<Expr>, stmts: Vec<Stmt>, decls: Vec<ExprFnDecl>) -> Self {
+        Module {
+            metadata,
+            stmts,
+            decls,
+        }
+    }
+}
+
+impl Display for Module {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        let meta = self
+            .metadata
+            .as_ref()
+            .map(|e| format!("module {};\n", e))
+            .unwrap_or_default();
+        let stmts: String = self.stmts.iter().map(|s| format!("{}\n", s)).collect();
+        let decls: String = self.decls.iter().map(|d| format!("{}\n", d)).collect();
+        write!(fmt, "{}{}{}", meta, stmts, decls)
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -28,6 +64,16 @@ pub enum Stmt {
     ImportToml(StmtImportToml),
     /// `include "./path/to/tq/module";`
     Include(StmtInclude),
+}
+
+impl Display for Stmt {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        match *self {
+            Stmt::ImportMod(ref import) => write!(fmt, "{};", import),
+            Stmt::ImportToml(ref import) => write!(fmt, "{};", import),
+            Stmt::Include(ref include) => write!(fmt, "{};", include),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -44,6 +90,17 @@ impl StmtImportMod {
             path,
             metadata,
         }
+    }
+}
+
+impl Display for StmtImportMod {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        let meta = self
+            .metadata
+            .as_ref()
+            .map(|e| format!(" {}", e))
+            .unwrap_or_default();
+        write!(fmt, "import {:?} as {}{}", self.file, self.path, meta)
     }
 }
 
@@ -64,6 +121,17 @@ impl StmtImportToml {
     }
 }
 
+impl Display for StmtImportToml {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        let meta = self
+            .metadata
+            .as_ref()
+            .map(|e| format!(" {}", e))
+            .unwrap_or_default();
+        write!(fmt, "import {:?} as {}{}", self.file, self.variable, meta)
+    }
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct StmtInclude {
     file: PathBuf,
@@ -73,6 +141,17 @@ pub struct StmtInclude {
 impl StmtInclude {
     pub fn new(file: PathBuf, metadata: Option<Expr>) -> Self {
         StmtInclude { file, metadata }
+    }
+}
+
+impl Display for StmtInclude {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        let meta = self
+            .metadata
+            .as_ref()
+            .map(|e| format!(" {}", e))
+            .unwrap_or_default();
+        write!(fmt, "include {:?}{}", self.file, meta)
     }
 }
 
