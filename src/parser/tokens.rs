@@ -10,7 +10,9 @@ use crate::ast::tokens::{FnParam, Ident, IdentPath, Variable};
 mod literal;
 
 pub fn space<'a>() -> Parser<'a, u8, ()> {
-    is_a(multispace).repeat(0..).discard()
+    let comment = (sym(b'#') + none_of(b"\n\r").repeat(0..)).collect();
+    let whitespace = is_a(multispace).collect();
+    (comment | whitespace).repeat(0..).discard()
 }
 
 pub fn identifier<'a>() -> Parser<'a, u8, Ident> {
