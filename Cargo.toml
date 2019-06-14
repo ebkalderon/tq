@@ -9,6 +9,9 @@ repository = "https://github.com/ebkalderon/tq"
 readme = "README.md"
 edition = "2018"
 
+[badges]
+circle-ci = { repository = "ebkalderon/tq" }
+
 [dependencies]
 colored = "1.8.0"
 env_logger = "0.6.1"
