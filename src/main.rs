@@ -10,7 +10,7 @@ use tq::ast::Filter;
 struct Opt {
     #[structopt(default_value = ".", parse(from_str = "filter_or_default"))]
     pub filter: String,
-    #[structopt(default_value = "Vec::new")]
+    #[structopt(parse(from_os_str))]
     pub files: Vec<PathBuf>,
 }
 
