@@ -1,5 +1,6 @@
 //! Errors thrown when parsing filters and modules.
 
+use std::borrow::Cow;
 use std::error::Error;
 use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::iter;
@@ -132,48 +133,38 @@ impl Error for ModuleError {
 }
 
 /// Extension trait for `pom::Error`.
-trait PomErrorExt {
+trait PomErrorExt<'a> {
     /// Returns the error as a tuple of the following members:
     ///
     /// * String representation of the error.
     /// * Character index where the error occurred, if known.
     /// * Additional error information, if present.
-    fn to_display_data(&self) -> (String, Option<usize>, Option<Box<PomError>>);
+    fn to_display_data(&'a self) -> (Cow<'a, str>, Option<usize>, Option<&'a PomError>);
 }
 
-impl PomErrorExt for PomError {
-    fn to_display_data(&self) -> (String, Option<usize>, Option<Box<PomError>>) {
+impl<'a> PomErrorExt<'a> for PomError {
+    fn to_display_data(&'a self) -> (Cow<'a, str>, Option<usize>, Option<&'a PomError>) {
         match self {
             PomError::Incomplete => {
-                let message = "input is incomplete, expected final expression".to_owned();
+                let message = "input is incomplete, expected final expression".into();
                 (message, None, None)
             }
-            PomError::Mismatch { message, position } => {
-                let message = message.clone();
-                (message, Some(*position), None)
-            }
-            PomError::Conversion { message, position } => {
-                let message = message.clone();
-                (message, Some(*position), None)
-            }
+            PomError::Mismatch { message, position } => (message.into(), Some(*position), None),
+            PomError::Conversion { message, position } => (message.into(), Some(*position), None),
             PomError::Expect {
                 message,
                 position,
                 inner,
-            } => {
-                let message = message.clone();
-                let extra = inner.clone();
-                (message, Some(*position), Some(extra))
-            }
+            } => (message.into(), Some(*position), Some(inner as _)),
             PomError::Custom {
                 message,
                 position,
                 inner,
-            } => {
-                let message = message.clone();
-                let extra = inner.clone();
-                (message, Some(*position), extra)
-            }
+            } => (
+                message.into(),
+                Some(*position),
+                inner.as_ref().map(|e| e.as_ref()),
+            ),
         }
     }
 }
