@@ -29,16 +29,14 @@ pub fn table_key<'a>() -> Parser<'a, u8, TableKey> {
 
 fn table_value<'a>() -> Parser<'a, u8, Expr> {
     let pipe = {
-        let pipe = sym(b'|').map(|_| BinaryOp::Pipe);
-        let expr = call(unary) + (pipe + call(unary)).repeat(0..);
+        let expr = call(unary) + (sym(b'|') * call(unary)).repeat(0..);
         expr.map(|(first, rest)| {
-            rest.into_iter().fold(first, |lhs, (op, rhs)| {
-                Expr::Binary(op, Box::from(lhs), Box::from(rhs))
+            rest.into_iter().fold(first, |lhs, rhs| {
+                Expr::Binary(BinaryOp::Pipe, Box::from(lhs), Box::from(rhs))
             })
         })
     };
 
     let paren = sym(b'(') * call(table_value) - sym(b')');
-    let unary = call(unary);
-    tokens::space() * (paren | pipe | unary) - tokens::space()
+    tokens::space() * (paren | pipe) - tokens::space()
 }

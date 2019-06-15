@@ -22,7 +22,12 @@ structopt = "0.2.15"
 toml = "0.5.1"
 
 [dev-dependencies]
+criterion = "0.2.11"
 float-cmp = "0.4"
 
 [profile.release]
 lto = true
+
+[[bench]]
+name = "builtin"
+harness = false
