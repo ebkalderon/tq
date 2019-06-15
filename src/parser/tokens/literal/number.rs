@@ -1,3 +1,4 @@
+use std::f64;
 use std::str::{self, FromStr};
 
 use pom::char_class::{digit, hex_digit, oct_digit};
@@ -28,16 +29,15 @@ fn float_literal<'a>() -> Parser<'a, u8, f64> {
 }
 
 fn float_inf_literal<'a>() -> Parser<'a, u8, f64> {
-    let nan = one_of(b"+-").opt() + seq(b"inf");
-    nan.collect().convert(str::from_utf8).convert(f64::from_str)
+    let positive = sym(b'+').opt() * seq(b"inf").map(|_| f64::INFINITY);
+    let negative = sym(b'-') * seq(b"inf").map(|_| f64::NEG_INFINITY);
+    positive | negative
 }
 
 fn float_nan_literal<'a>() -> Parser<'a, u8, f64> {
-    let nan = one_of(b"+-").opt() + seq(b"nan");
-    nan.collect()
-        .convert(str::from_utf8)
-        .map(|nan| nan.replace("nan", "NaN"))
-        .convert(|nan| f64::from_str(&nan))
+    let positive = sym(b'+').opt() * seq(b"nan").map(|_| f64::NAN);
+    let negative = sym(b'-') * seq(b"nan").map(|_| -f64::NAN);
+    positive | negative
 }
 
 pub fn integer<'a>() -> Parser<'a, u8, i64> {
