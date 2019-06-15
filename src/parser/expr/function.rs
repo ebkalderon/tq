@@ -6,7 +6,7 @@ use super::{expr, tokens};
 use crate::ast::{ExprFnCall, ExprFnDecl};
 
 pub fn function_decl<'a>() -> Parser<'a, u8, ExprFnDecl> {
-    let name = tokens::space() * (seq(b"def ") * tokens::ident_path());
+    let name = (tokens::space() + tokens::keyword_def() + tokens::space()) * tokens::ident_path();
     let param = || tokens::space() * tokens::fn_param() - tokens::space();
     let params = optional_arg_sequence(param) - sym(b':');
     let body = call(expr) - sym(b';');

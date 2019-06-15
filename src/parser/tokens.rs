@@ -1,3 +1,4 @@
+pub use self::keywords::*;
 pub use self::literal::{literal, string};
 
 use std::iter;
@@ -7,6 +8,7 @@ use pom::parser::*;
 
 use crate::ast::tokens::{FnParam, Ident, IdentPath, Variable};
 
+mod keywords;
 mod literal;
 
 pub fn space<'a>() -> Parser<'a, u8, ()> {
@@ -23,9 +25,11 @@ pub fn identifier<'a>() -> Parser<'a, u8, Ident> {
 }
 
 pub fn ident_path<'a>() -> Parser<'a, u8, IdentPath> {
-    (identifier() + (seq(b"::") * identifier()).repeat(0..))
-        .map(|(first, rest)| iter::once(first).chain(rest))
-        .map(IdentPath::from)
+    let single = !keyword() * identifier().repeat(1);
+    let multiple = (identifier() + (seq(b"::") * identifier()).repeat(1..))
+        .map(|(first, rest)| iter::once(first).chain(rest).collect());
+
+    (single | multiple).map(IdentPath::from)
 }
 
 pub fn variable<'a>() -> Parser<'a, u8, Variable> {

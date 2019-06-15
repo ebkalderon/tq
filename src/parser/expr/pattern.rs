@@ -22,7 +22,7 @@ fn table<'a>() -> Parser<'a, u8, ExprPattern> {
 }
 
 pub fn binding<'a>() -> Parser<'a, u8, ExprBinding> {
-    let bind = call(unary) + (seq(b"as") * call(pattern));
+    let bind = call(unary) + (tokens::keyword_as() * call(pattern));
     bind.map(|(expr, pat)| ExprBinding::new(expr, pat))
 }
 
