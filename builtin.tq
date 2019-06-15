@@ -1,7 +1,3 @@
-module "blah";
-
-import "hi" as BLAH;
-
 def halt_error: halt_error(5);
 def error(msg): msg|error;
 def map(f): [.[] | f];
