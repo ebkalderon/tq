@@ -41,10 +41,10 @@ impl FromStr for Module {
 
 pub fn parse_module<S: AsRef<str>>(module: S) -> Result<Module, ModuleError> {
     let text = module.as_ref();
-    let meta = (tokens::keyword_module() + tokens::space()) * expr() - tokens::space() - sym(b';');
-    let stmts = (stmt() - tokens::space()).repeat(0..);
-    let decls = (function_decl() - tokens::space()).repeat(1..);
-    (meta.opt() + stmts + decls - end())
+    let meta = (tokens::space() + tokens::keyword_module()) * expr() - sym(b';');
+    let stmts = stmt().repeat(0..);
+    let decls = function_decl().repeat(0..);
+    (meta.opt() + stmts + decls - tokens::space() - end())
         .map(|((meta, stmts), decls)| Module::new(meta, stmts, decls))
         .parse(text.as_bytes())
         .map_err(|e| ModuleError::new(e, text))
