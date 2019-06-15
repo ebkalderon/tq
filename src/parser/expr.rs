@@ -93,8 +93,8 @@ fn assign_op<'a>() -> Parser<'a, u8, Expr> {
 }
 
 fn logical<'a>() -> Parser<'a, u8, Expr> {
-    let and = seq(b"and").map(|_| BinaryOp::And);
-    let or = seq(b"or").map(|_| BinaryOp::Or);
+    let and = tokens::keyword_and().map(|_| BinaryOp::And);
+    let or = tokens::keyword_or().map(|_| BinaryOp::Or);
     let expr = call(compare) + ((and | or) + call(compare)).repeat(0..);
     expr.map(|(first, rest)| {
         rest.into_iter().fold(first, |lhs, (op, rhs)| {
@@ -180,7 +180,7 @@ fn terms<'a>() -> Parser<'a, u8, Expr> {
     let paren = sym(b'(') * call(expr).map(Box::from).map(Expr::Paren) - sym(b')');
     let control_flow = control_flow();
     let label_break = label_break().map(Expr::Break);
-    let empty = seq(b"empty").map(|_| Expr::Empty);
+    let empty = tokens::keyword_empty().map(|_| Expr::Empty);
     let fn_call = function_call().map(Expr::FnCall);
     let filter = filter();
     let construct = construct();

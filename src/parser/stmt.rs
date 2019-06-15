@@ -15,8 +15,8 @@ pub fn stmt<'a>() -> Parser<'a, u8, Stmt> {
 }
 
 fn import_toml<'a>() -> Parser<'a, u8, StmtImportToml> {
-    let keyword = seq(b"import") + tokens::space();
-    let file = path_buf() - tokens::space() - seq(b"as") - tokens::space();
+    let keyword = tokens::keyword_import() + tokens::space();
+    let file = path_buf() - tokens::space() - tokens::keyword_as() - tokens::space();
     let var = tokens::variable() - tokens::space();
     let metadata = expr().opt();
     let stmt = keyword * (file + var + metadata);
@@ -24,8 +24,8 @@ fn import_toml<'a>() -> Parser<'a, u8, StmtImportToml> {
 }
 
 fn import_mod<'a>() -> Parser<'a, u8, StmtImportMod> {
-    let keyword = seq(b"import") + tokens::space();
-    let file = path_buf() - tokens::space() - seq(b"as") - tokens::space();
+    let keyword = tokens::keyword_import() + tokens::space();
+    let file = path_buf() - tokens::space() - tokens::keyword_as() - tokens::space();
     let path = tokens::ident_path() - tokens::space();
     let metadata = expr().opt();
     let stmt = keyword * (file + path + metadata);
@@ -33,7 +33,7 @@ fn import_mod<'a>() -> Parser<'a, u8, StmtImportMod> {
 }
 
 fn include<'a>() -> Parser<'a, u8, StmtInclude> {
-    let keyword = seq(b"include") + tokens::space();
+    let keyword = tokens::keyword_include() + tokens::space();
     let file = path_buf() - tokens::space();
     let metadata = expr().opt();
     let stmt = keyword * (file + metadata);
