@@ -12,8 +12,8 @@ mod keywords;
 mod literal;
 
 pub fn space<'a>() -> Parser<'a, u8, ()> {
-    let comment = (sym(b'#') + none_of(b"\n\r").repeat(0..)).collect();
-    let whitespace = is_a(multispace).collect();
+    let comment = sym(b'#') - none_of(b"\n\r").repeat(0..);
+    let whitespace = is_a(multispace);
     (comment | whitespace).repeat(0..).discard()
 }
 

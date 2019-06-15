@@ -53,21 +53,19 @@ fn label<'a>() -> Parser<'a, u8, Expr> {
 }
 
 fn pipe<'a>() -> Parser<'a, u8, Expr> {
-    let pipe = sym(b'|').map(|_| BinaryOp::Pipe);
-    let expr = call(chain) + (pipe + call(expr)).repeat(0..);
+    let expr = call(chain) + (sym(b'|') * call(expr)).repeat(0..);
     expr.map(|(first, rest)| {
-        rest.into_iter().fold(first, |lhs, (op, rhs)| {
-            Expr::Binary(op, Box::from(lhs), Box::from(rhs))
+        rest.into_iter().fold(first, |lhs, rhs| {
+            Expr::Binary(BinaryOp::Pipe, Box::from(lhs), Box::from(rhs))
         })
     })
 }
 
 fn chain<'a>() -> Parser<'a, u8, Expr> {
-    let comma = sym(b',').map(|_| BinaryOp::Comma);
-    let expr = call(assign_op) + (comma + call(expr)).repeat(0..);
+    let expr = call(assign_op) + (sym(b',') * call(expr)).repeat(0..);
     expr.map(|(first, rest)| {
-        rest.into_iter().fold(first, |lhs, (op, rhs)| {
-            Expr::Binary(op, Box::from(lhs), Box::from(rhs))
+        rest.into_iter().fold(first, |lhs, rhs| {
+            Expr::Binary(BinaryOp::Comma, Box::from(lhs), Box::from(rhs))
         })
     })
 }
@@ -166,7 +164,7 @@ fn try_postfix<'a>() -> Parser<'a, u8, Expr> {
 
 fn index<'a>() -> Parser<'a, u8, Expr> {
     let iter = (sym(b'[') + tokens::space() + sym(b']')).map(|_| ExprIndex::Iter);
-    let exact = (sym(b'[') * call(expr) - sym(b']')).map(ExprIndex::Exact);
+    let exact = sym(b'[') * call(expr).map(ExprIndex::Exact) - sym(b']');
     let slice = index_slice().map(ExprIndex::Slice);
     let expr = call(terms) + (iter | exact | slice).repeat(0..);
     expr.map(|(term, indices)| {
