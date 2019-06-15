@@ -20,11 +20,11 @@ fn foreach<'a>() -> Parser<'a, u8, Expr> {
 }
 
 fn if_else<'a>() -> Parser<'a, u8, Expr> {
-    use super::tokens::{keyword_elif, keyword_end, keyword_if, keyword_then};
+    use super::tokens::{keyword_elif, keyword_else, keyword_end, keyword_if, keyword_then};
 
     let main_clause = keyword_if() * call(expr) + (keyword_then() * call(expr));
     let alt_clauses = (keyword_elif() * call(expr) + (keyword_then() * call(expr))).repeat(0..);
-    let fallback = keyword_end() * call(expr) - keyword_end();
+    let fallback = keyword_else() * call(expr) - keyword_end();
 
     (main_clause + alt_clauses + fallback)
         .map(|((main, alt), f)| ExprIfElse::new(main, alt, f))
