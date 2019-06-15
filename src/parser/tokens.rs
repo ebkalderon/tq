@@ -18,7 +18,9 @@ pub fn space<'a>() -> Parser<'a, u8, ()> {
 }
 
 pub fn identifier<'a>() -> Parser<'a, u8, Ident> {
-    ((is_a(alpha) | one_of(b"_-")) + (is_a(alphanum) | one_of(b"_-")).repeat(0..))
+    let first = is_a(|c| alpha(c) || c == b'_' || c == b'-');
+    let rest = is_a(|c| alphanum(c) || c == b'_' || c == b'-');
+    (first + rest.repeat(0..))
         .map(|(first, rest)| iter::once(first).chain(rest).collect())
         .convert(String::from_utf8)
         .map(Ident::from)
