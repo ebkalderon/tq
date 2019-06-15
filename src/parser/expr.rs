@@ -181,10 +181,10 @@ fn terms<'a>() -> Parser<'a, u8, Expr> {
     let control_flow = control_flow();
     let label_break = label_break().map(Expr::Break);
     let empty = tokens::keyword_empty().map(|_| Expr::Empty);
-    let fn_call = function_call().map(Expr::FnCall);
     let filter = filter();
     let construct = construct();
     let literal = tokens::literal().map(Expr::Literal);
+    let fn_call = function_call().map(Expr::FnCall);
     let variable = tokens::variable().map(Expr::Variable);
-    paren | control_flow | label_break | empty | fn_call | filter | construct | literal | variable
+    paren | control_flow | label_break | empty | filter | construct | literal | fn_call | variable
 }
