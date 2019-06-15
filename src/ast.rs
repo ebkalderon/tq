@@ -232,7 +232,7 @@ impl Display for Expr {
             Expr::Literal(ref lit) => write!(fmt, "{}", lit),
             Expr::Variable(ref var) => write!(fmt, "{}", var),
             Expr::Array(ref inner) => {
-                let expr = inner.as_ref().map(|e| e.to_string()).unwrap_or_default();
+                let expr = inner.as_ref().map(ToString::to_string).unwrap_or_default();
                 write!(fmt, "[{}]", expr)
             }
             Expr::Table(ref table) => {
@@ -463,7 +463,7 @@ impl Display for ExprPattern {
         match *self {
             ExprPattern::Variable(ref var) => write!(fmt, "{}", var),
             ExprPattern::Array(ref pats) => {
-                let pats: Vec<_> = pats.iter().map(|p| p.to_string()).collect();
+                let pats: Vec<_> = pats.iter().map(ToString::to_string).collect();
                 write!(fmt, "[{}]", pats.join(", "))
             }
             ExprPattern::Table(ref table) => {
@@ -494,7 +494,7 @@ impl Display for ExprFnCall {
         if self.args.is_empty() {
             write!(fmt, "{}", self.path)
         } else {
-            let args: Vec<_> = self.args.iter().map(|arg| arg.to_string()).collect();
+            let args: Vec<_> = self.args.iter().map(ToString::to_string).collect();
             write!(fmt, "{}({})", self.path, args.join("; "))
         }
     }
@@ -515,7 +515,7 @@ impl ExprFnDecl {
 
 impl Display for ExprFnDecl {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
-        let params: Vec<_> = self.params.iter().map(|param| param.to_string()).collect();
+        let params: Vec<_> = self.params.iter().map(ToString::to_string).collect();
         let params = params.join("; ");
 
         if params.is_empty() {

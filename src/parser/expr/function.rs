@@ -29,5 +29,5 @@ where
 {
     let seq = sym(b'(') * call(token.clone()) + (sym(b';') * call(token)).repeat(0..) - sym(b')');
     let args = seq.map(|(first, rest)| iter::once(first).chain(rest).collect());
-    args.opt().map(|args| args.unwrap_or_default())
+    args.opt().map(Option::unwrap_or_default)
 }
