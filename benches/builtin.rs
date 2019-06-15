@@ -9,7 +9,7 @@ const BUILTIN_FILE_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/builtin.tq
 fn parse_builtin(b: &mut Criterion) {
     let module = fs::read_to_string(BUILTIN_FILE_PATH).expect("builtin.tq not found");
 
-    b.bench_function("parse builtin", move |b| {
+    b.bench_function("parse builtin.tq", move |b| {
         b.iter(|| Module::from_str(&module).expect("Failed to parse builtin module"));
     });
 }
