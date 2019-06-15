@@ -163,7 +163,7 @@ impl<'a> PomErrorExt<'a> for PomError {
             } => (
                 message.into(),
                 Some(*position),
-                inner.as_ref().map(|e| e.as_ref()),
+                inner.as_ref().map(AsRef::as_ref),
             ),
         }
     }

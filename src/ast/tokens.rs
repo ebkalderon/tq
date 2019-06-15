@@ -46,7 +46,7 @@ impl Debug for IdentPath {
 
 impl Display for IdentPath {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
-        let idents: Vec<_> = self.0.iter().map(|i| i.to_string()).collect();
+        let idents: Vec<_> = self.0.iter().map(ToString::to_string).collect();
         write!(fmt, "{}", idents.join("::"))
     }
 }
@@ -72,7 +72,7 @@ pub struct Variable(Ident);
 impl<T: Into<Ident>> From<T> for Variable {
     fn from(ident: T) -> Self {
         let mut inner = ident.into();
-        inner.0 = inner.0.trim_start_matches("$").to_owned();
+        inner.0 = inner.0.trim_start_matches('$').to_owned();
         Variable(inner)
     }
 }
