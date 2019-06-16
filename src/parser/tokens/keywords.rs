@@ -4,7 +4,7 @@ use pom::parser::*;
 macro_rules! define_keywords {
     ($($function:ident => $keyword:tt),+) => {
         pub fn keyword<'a>() -> Parser<'a, u8, &'a [u8]> {
-            ($($function())|+) - not_a(alphanum)
+            ($($function())|+) - -not_a(alphanum)
         }
 
         $(
