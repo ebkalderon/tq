@@ -27,7 +27,7 @@ pub fn identifier<'a>() -> Parser<'a, u8, Ident> {
 }
 
 pub fn ident_path<'a>() -> Parser<'a, u8, IdentPath> {
-    let single = !keyword() * identifier().repeat(1);
+    let single = !keyword() * (identifier() - !seq(b"::")).repeat(1);
     let multiple = (identifier() + (seq(b"::") * identifier()).repeat(1..))
         .map(|(first, rest)| iter::once(first).chain(rest).collect());
 
