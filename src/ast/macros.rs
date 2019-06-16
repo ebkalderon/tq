@@ -1,5 +1,146 @@
 //! Utility macros for constructing ASTs from literals.
 
+/// Construct a `tq::ast::Stmts` from a sequence of `tq` statements.
+///
+/// # Limitations
+///
+/// This macro can only parse very rudimentary statements due to limitations of `macro_rules` in
+/// Rust.
+///
+/// # Example
+///
+/// ```rust,edition2018
+/// # use tq::tq_stmts;
+/// #
+/// let stmts = tq_stmts!(import "module" as FOO; import "toml" as $foo;);
+/// ```
+#[macro_export]
+macro_rules! tq_stmts {
+    (@stmt) => {
+        ::std::iter::empty()
+    };
+
+    (@stmt import $file:tt as $($path:ident)::+ ; $($rest:tt)*) => {
+        {
+            let path = IdentPath::from(vec![$(stringify!($path)),+]);
+            let stmt = StmtImportMod::new($file.into(), path, None);
+
+            let first = ::std::iter::once(Stmt::ImportMod(stmt));
+            let rest = $crate::tq_stmts!(@stmt $($rest)*);
+            first.chain(rest)
+        }
+    };
+
+    (@stmt import $file:tt as $($path:ident)::+ $meta:tt ; $($rest:tt)*) => {
+        {
+            let module = Some($crate::tq!($meta));
+            let path = IdentPath::from(vec![$(stringify!($path)),+]);
+            let stmt = StmtImportMod::new($file.into(), path, module);
+
+            let first = ::std::iter::once(Stmt::ImportMod(stmt));
+            let rest = $crate::tq_stmts!(@stmt $($rest)*);
+            first.chain(rest)
+        }
+    };
+
+    (@stmt import $file:tt as $dollar:tt $var:ident ; $($rest:tt)*) => {
+        {
+            let var = $crate::tq_token!($dollar$var);
+            let stmt = StmtImportToml::new($file.into(), var, None);
+
+            let first = ::std::iter::once(Stmt::ImportToml(stmt));
+            let rest = $crate::tq_stmts!(@stmt $($rest)*);
+            first.chain(rest)
+        }
+    };
+
+    (@stmt import $file:tt as $dollar:tt $var:ident $meta:tt ; $($rest:tt)*) => {
+        {
+            let module = Some($crate::tq!($meta));
+            let var = $crate::tq_token!($dollar$var);
+            let stmt = StmtImportToml::new($file.into(), var, module);
+
+            let first = ::std::iter::once(Stmt::ImportToml(stmt));
+            let rest = $crate::tq_stmts!(@stmt $($rest)*);
+            first.chain(rest)
+        }
+    };
+
+    (@stmt include $file:tt ; $($rest:tt)*) => {
+        {
+            let stmt = StmtInclude::new($file.into(), None);
+            let first = ::std::iter::once(Stmt::Include(stmt));
+            let rest = $crate::tq_stmts!(@stmt $($rest)*);
+            first.chain(rest)
+        }
+    };
+
+    (@stmt include $file:tt $meta:tt ; $($rest:tt)*) => {
+        {
+            let module = Some($crate::tq!($meta));
+            let stmt = StmtInclude::new($file.into(), module);
+
+            let first = ::std::iter::once(Stmt::Include(stmt));
+            let rest = $crate::tq_stmts!(@stmt $($rest)*);
+            first.chain(rest)
+        }
+    };
+
+    (module $meta:tt ; $($imports:tt)*) => {
+        {
+            #[allow(unused_imports)]
+            use $crate::ast::*;
+            #[allow(unused_imports)]
+            use $crate::ast::tokens::*;
+
+            let module = Some($crate::tq!($meta));
+            let stmts = $crate::tq_stmts!(@stmt $($imports)*).collect();
+            Stmts::new(module, stmts)
+        }
+    };
+
+    ($($imports:tt)*) => {
+        {
+            #[allow(unused_imports)]
+            use $crate::ast::*;
+            #[allow(unused_imports)]
+            use $crate::ast::tokens::*;
+
+            let stmts = $crate::tq_stmts!(@stmt $($imports)*).collect();
+            Stmts::new(None, stmts)
+        }
+    };
+}
+
+/// Returns an AST constructed by `tq_stmts!()` and also the statement sequence as a static string.
+///
+/// This is useful for testing whether the parser and the `tq_stmts!()` macro both produce the same
+/// AST.
+///
+/// # Example
+///
+/// ```rust,edition2018
+/// # use tq::tq_stmts_and_str;
+/// # use tq::ast::{Expr, Stmt};
+/// #
+/// let (stmts, s) = tq_stmts_and_str!(module "hello";);
+/// assert_eq!(stmts, Stmts::new(Some(Expr::Literal(Literal::from("hello"))), Vec::new()));
+/// assert_eq!(s, "module \"hello\" ;");
+/// ```
+#[cfg(test)]
+#[macro_export]
+macro_rules! tq_stmts_and_str {
+    ($($stmts:tt)*) => {
+        (
+            $crate::tq_stmts!($($stmts)*),
+            stringify!($($stmts)*)
+                .replace('\n', " ")
+                .replace(" :: ", "::")
+                .replace("$ ", "$"),
+        )
+    };
+}
+
 /// Construct a `tq::ast::Expr` from a `tq` filter literal.
 ///
 /// # Limitations
@@ -277,7 +418,8 @@ macro_rules! tq_expr_and_str {
                 .replace("- ", "-")
                 .replace(" [", "[")
                 .replace(" ]", "]")
-                .replace("$ ", "$"),
+                .replace("$ ", "$")
+                .replace(" :: ", "::")
         )
     };
 }
