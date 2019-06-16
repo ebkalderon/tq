@@ -8,7 +8,7 @@ use crate::ast::{Stmt, StmtImportMod, StmtImportToml, StmtInclude, Stmts};
 
 pub fn stmts<'a>() -> Parser<'a, u8, Stmts> {
     let module = tokens::keyword_module() * tokens::space() * expr() - sym(b';');
-    let stmts = tokens::space() * stmt().repeat(0..);
+    let stmts = (tokens::space() * stmt()).repeat(0..);
     (module.opt() + stmts).map(|(module, stmts)| Stmts::new(module, stmts))
 }
 
@@ -48,4 +48,69 @@ fn include<'a>() -> Parser<'a, u8, StmtInclude> {
 
 fn path_buf<'a>() -> Parser<'a, u8, PathBuf> {
     tokens::string().map(PathBuf::from)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::tq_stmts_and_str;
+
+    #[test]
+    fn empty() {
+        let (expected, text) = tq_stmts_and_str!();
+        let actual = stmts().parse(text.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn module() {
+        let (expected, text) = tq_stmts_and_str!(module "metadata";);
+        let actual = stmts().parse(text.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn import_mod() {
+        let (expected, text) = tq_stmts_and_str!(import "path/to/mod" as FOO::BAR;);
+        let actual = stmts().parse(text.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, text) = tq_stmts_and_str!(import "path/to/mod" as FOO "meta";);
+        let actual = stmts().parse(text.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn import_toml() {
+        let (expected, text) = tq_stmts_and_str!(import "path/to/toml" as $foo;);
+        let actual = stmts().parse(text.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, text) = tq_stmts_and_str!(import "path/to/toml" as $foo "meta";);
+        let actual = stmts().parse(text.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn include() {
+        let (expected, text) = tq_stmts_and_str!(include "path/to/filter";);
+        let actual = stmts().parse(text.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, text) = tq_stmts_and_str!(include "path/to/filter" "meta";);
+        let actual = stmts().parse(text.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn complex_sequence() {
+        let (expected, text) = tq_stmts_and_str! {
+            module "meta";
+            import "foo" as IDENT;
+            import "bar" as $var;
+            include "hello" "meta";
+        };
+        let actual = stmts().parse(text.as_bytes()).unwrap();
+        assert_eq!(expected, actual);
+    }
 }
