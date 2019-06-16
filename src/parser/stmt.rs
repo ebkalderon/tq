@@ -4,14 +4,20 @@ use pom::parser::*;
 
 use super::expr::expr;
 use super::tokens;
-use crate::ast::{Stmt, StmtImportMod, StmtImportToml, StmtInclude};
+use crate::ast::{Stmt, StmtImportMod, StmtImportToml, StmtInclude, Stmts};
 
-pub fn stmt<'a>() -> Parser<'a, u8, Stmt> {
+pub fn stmts<'a>() -> Parser<'a, u8, Stmts> {
+    let module = tokens::keyword_module() * tokens::space() * expr() - sym(b';');
+    let stmts = tokens::space() * stmt().repeat(0..);
+    (module.opt() + stmts).map(|(module, stmts)| Stmts::new(module, stmts))
+}
+
+fn stmt<'a>() -> Parser<'a, u8, Stmt> {
     let import_toml = import_toml().map(Stmt::ImportToml);
     let import_mod = import_mod().map(Stmt::ImportMod);
     let include = include().map(Stmt::Include);
     let stmt = import_mod | import_toml | include;
-    tokens::space() * stmt - tokens::space() - sym(b';')
+    stmt - tokens::space() - sym(b';')
 }
 
 fn import_toml<'a>() -> Parser<'a, u8, StmtImportToml> {

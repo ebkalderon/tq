@@ -5,7 +5,7 @@ use std::str::{self, FromStr};
 use pom::parser::*;
 
 use self::expr::{expr, function_decl};
-use self::stmt::stmt;
+use self::stmt::stmts;
 use crate::ast::{Filter, Module};
 
 mod error;
@@ -23,9 +23,7 @@ impl FromStr for Filter {
 
 pub fn parse_filter<S: AsRef<str>>(filter: S) -> Result<Filter, FilterError> {
     let text = filter.as_ref();
-    let stmts = stmt().repeat(0..);
-    let expr = expr();
-    (stmts + expr - end())
+    (tokens::space() * stmts() + expr() - end())
         .map(|(stmts, expr)| Filter::new(stmts, expr))
         .parse(text.as_bytes())
         .map_err(|e| FilterError::new(e, text))
@@ -41,11 +39,9 @@ impl FromStr for Module {
 
 pub fn parse_module<S: AsRef<str>>(module: S) -> Result<Module, ModuleError> {
     let text = module.as_ref();
-    let meta = (tokens::space() + tokens::keyword_module()) * expr() - sym(b';');
-    let stmts = stmt().repeat(0..);
     let decls = function_decl().repeat(0..);
-    (meta.opt() + stmts + decls - tokens::space() - end())
-        .map(|((meta, stmts), decls)| Module::new(meta, stmts, decls))
+    (tokens::space() * stmts() + decls - tokens::space() - end())
+        .map(|(stmts, decls)| Module::new(stmts, decls))
         .parse(text.as_bytes())
         .map_err(|e| ModuleError::new(e, text))
 }

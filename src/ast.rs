@@ -9,50 +9,65 @@ mod macros;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Filter {
-    stmts: Vec<Stmt>,
+    stmts: Stmts,
     expr: Expr,
 }
 
 impl Filter {
-    pub fn new(stmts: Vec<Stmt>, expr: Expr) -> Self {
+    pub fn new(stmts: Stmts, expr: Expr) -> Self {
         Filter { stmts, expr }
     }
 }
 
 impl Display for Filter {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
-        let stmts: String = self.stmts.iter().map(|s| format!("{} ", s)).collect();
-        write!(fmt, "{}{}", stmts, self.expr)
+        write!(fmt, "{}{}", self.stmts, self.expr)
     }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct Module {
-    metadata: Option<Expr>,
-    stmts: Vec<Stmt>,
+    stmts: Stmts,
     decls: Vec<ExprFnDecl>,
 }
 
 impl Module {
-    pub fn new(metadata: Option<Expr>, stmts: Vec<Stmt>, decls: Vec<ExprFnDecl>) -> Self {
-        Module {
-            metadata,
-            stmts,
-            decls,
-        }
+    pub fn new(stmts: Stmts, decls: Vec<ExprFnDecl>) -> Self {
+        Module { stmts, decls }
     }
 }
 
 impl Display for Module {
     fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
-        let meta = self
-            .metadata
-            .as_ref()
-            .map(|e| format!("module {};\n", e))
-            .unwrap_or_default();
+        let strs: Vec<_> = self.decls.iter().map(ToString::to_string).collect();
+        let decls = strs.join("\n");
+        write!(fmt, "{}{}", self.stmts.to_string_pretty(), decls)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct Stmts {
+    module: Option<Expr>,
+    stmts: Vec<Stmt>,
+}
+
+impl Stmts {
+    pub fn new(module: Option<Expr>, stmts: Vec<Stmt>) -> Self {
+        Stmts { module, stmts }
+    }
+
+    fn to_string_pretty(&self) -> String {
+        let module = self.module.as_ref().map(|m| format!("module {};\n", m));
         let stmts: String = self.stmts.iter().map(|s| format!("{}\n", s)).collect();
-        let decls: String = self.decls.iter().map(|d| format!("{}\n", d)).collect();
-        write!(fmt, "{}{}{}", meta, stmts, decls)
+        format!("{}{}", module.unwrap_or_default(), stmts)
+    }
+}
+
+impl Display for Stmts {
+    fn fmt(&self, fmt: &mut Formatter) -> FmtResult {
+        let module = self.module.as_ref().map(|m| format!("module {}; ", m));
+        let stmts: String = self.stmts.iter().map(|s| format!("{} ", s)).collect();
+        write!(fmt, "{}{}", module.unwrap_or_default(), stmts)
     }
 }
 
