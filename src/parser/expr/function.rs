@@ -1,33 +1,38 @@
-use std::iter;
-
-use pom::parser::*;
+use nom::character::complete::char;
+use nom::combinator::{map, opt};
+use nom::multi::separated_nonempty_list;
+use nom::sequence::{delimited, pair, preceded, terminated, tuple};
+use nom::IResult;
 
 use super::{expr, tokens};
-use crate::ast::{ExprFnCall, ExprFnDecl};
+use crate::ast::tokens::FnParam;
+use crate::ast::{Expr, ExprFnCall, ExprFnDecl};
 
-pub fn function_decl<'a>() -> Parser<'a, u8, ExprFnDecl> {
-    let name = (tokens::space() + tokens::keyword_def() + tokens::space()) * tokens::ident_path();
-    let param = || tokens::space() * tokens::fn_param() - tokens::space();
-    let params = optional_arg_sequence(param) - sym(b':');
-    let body = call(expr) - sym(b';');
-    (name + params + body).map(|((name, args), body)| ExprFnDecl::new(name, args, body))
+pub fn function_decl(input: &str) -> IResult<&str, ExprFnDecl> {
+    let key_def = pair(tokens::keyword_def, tokens::space);
+    let name = preceded(key_def, tokens::ident_path);
+    let params = terminated(opt_param_sequence, pair(char(':'), tokens::space));
+    let body = terminated(expr, char(';'));
+
+    map(tuple((name, params, body)), |(name, params, body)| {
+        ExprFnDecl::new(name, params, body)
+    })(input)
 }
 
-pub fn function_call<'a>() -> Parser<'a, u8, ExprFnCall> {
-    let name = tokens::ident_path();
-    let args = optional_arg_sequence(expr);
-    (name + args).map(|(name, args)| ExprFnCall::new(name, args))
+pub fn function_call(input: &str) -> IResult<&str, ExprFnCall> {
+    let call = pair(tokens::ident_path, opt_arg_sequence);
+    map(call, |(name, args)| ExprFnCall::new(name, args))(input)
 }
 
-/// Parses an optional sequence of function arguments of type `T`.
-///
-/// If the function being parsed takes no arguments, this parser will return an empty `Vec`.
-fn optional_arg_sequence<'a, T, F>(token: F) -> Parser<'a, u8, Vec<T>>
-where
-    T: 'a,
-    F: 'a + Clone + Fn() -> Parser<'a, u8, T>,
-{
-    let seq = sym(b'(') * call(token.clone()) + (sym(b';') * call(token)).repeat(0..) - sym(b')');
-    let args = seq.map(|(first, rest)| iter::once(first).chain(rest).collect());
-    args.opt().map(Option::unwrap_or_default)
+fn opt_param_sequence(input: &str) -> IResult<&str, Vec<FnParam>> {
+    let param = terminated(tokens::fn_param, tokens::space);
+    let params = separated_nonempty_list(pair(char(';'), tokens::space), param);
+    let seq = delimited(pair(char('('), tokens::space), params, char(')'));
+    map(opt(seq), Option::unwrap_or_default)(input)
+}
+
+fn opt_arg_sequence(input: &str) -> IResult<&str, Vec<Expr>> {
+    let args = separated_nonempty_list(pair(char(';'), tokens::space), expr);
+    let seq = delimited(pair(char('('), tokens::space), args, char(')'));
+    map(opt(seq), Option::unwrap_or_default)(input)
 }

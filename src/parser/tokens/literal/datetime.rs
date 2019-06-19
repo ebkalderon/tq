@@ -1,84 +1,86 @@
 use std::str::{self, FromStr};
 
-use pom::char_class::digit;
-use pom::parser::*;
+use nom::branch::alt;
+use nom::bytes::complete::tag;
+use nom::character::complete::{char, digit1, one_of};
+use nom::combinator::{map_res, opt, recognize, verify};
+use nom::sequence::{pair, tuple};
+use nom::IResult;
 use toml::value::Datetime;
 
-pub fn datetime<'a>() -> Parser<'a, u8, Datetime> {
-    let time_str = datetime_literal() | date_literal() | time_literal();
-    time_str.convert(str::from_utf8).convert(Datetime::from_str)
+use super::take_n;
+
+pub fn datetime(input: &str) -> IResult<&str, Datetime> {
+    let time_str = alt((datetime_literal, date_literal, time_literal));
+    map_res(time_str, Datetime::from_str)(input)
 }
 
-fn date_literal<'a>() -> Parser<'a, u8, &'a [u8]> {
-    let year = is_a(digit).repeat(1..);
-    let month = is_a(digit).repeat(2);
-    let day = is_a(digit).repeat(2);
-    (year + (sym(b'-') + month) + (sym(b'-') + day)).collect()
+fn date_literal(input: &str) -> IResult<&str, &str> {
+    let year = digit1;
+    let month = verify(take_n(2), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let day = verify(take_n(2), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    recognize(tuple((year, char('-'), month, char('-'), day)))(input)
 }
 
-fn time_literal<'a>() -> Parser<'a, u8, &'a [u8]> {
-    let hours = is_a(digit).repeat(2);
-    let minutes = is_a(digit).repeat(2);
-    let seconds = is_a(digit).repeat(2);
-    let extra = sym(b'.') + is_a(digit).repeat(6);
-    (hours + sym(b':') + minutes + sym(b':') + seconds + extra.opt()).collect()
+fn time_literal(input: &str) -> IResult<&str, &str> {
+    let hours = verify(take_n(2), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let minutes = verify(take_n(2), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let seconds = verify(take_n(2), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let extra = verify(take_n(6), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let time = tuple((hours, char(':'), minutes, char(':'), seconds));
+    recognize(pair(time, opt(pair(char('.'), extra))))(input)
 }
 
-fn datetime_literal<'a>() -> Parser<'a, u8, &'a [u8]> {
-    let hours = is_a(digit).repeat(2);
-    let minutes = is_a(digit).repeat(2);
-    let seconds = is_a(digit).repeat(2);
-    let base_time = hours + sym(b':') + minutes + sym(b':') + seconds;
+fn datetime_literal(input: &str) -> IResult<&str, &str> {
+    let hours = verify(take_n(2), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let minutes = verify(take_n(2), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let seconds = verify(take_n(2), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let base_time = tuple((hours, char(':'), minutes, char(':'), seconds));
 
-    let hours = is_a(digit).repeat(2);
-    let minutes = is_a(digit).repeat(2);
-    let offset = hours + sym(b':') + minutes;
+    let hours = verify(take_n(2), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let minutes = verify(take_n(2), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let offset = tuple((char('-'), hours, char(':'), minutes));
 
-    let extra = sym(b'.') + is_a(digit).repeat(6);
-    let time = base_time + (sym(b'Z').map(Some) | (extra.opt() * (sym(b'-') - offset).opt())).opt();
+    let extra = verify(take_n(6), |c: &str| c.chars().all(|c| c.is_ascii_digit()));
+    let zone = alt((
+        recognize(tag("Z")),
+        recognize(pair(opt(pair(char('.'), extra)), opt(offset))),
+    ));
+    let full_time = pair(base_time, opt(zone));
 
-    (date_literal() + one_of(b"T ") + time).collect()
+    recognize(tuple((date_literal, one_of("T "), full_time)))(input)
 }
 
 #[cfg(test)]
 mod tests {
+    use nom::combinator::all_consuming;
+
     use super::*;
+
+    macro_rules! assert_datetime_parses {
+        ($str:expr) => {
+            let (_, full) = all_consuming(datetime)($str).expect("datetime() parse failed");
+            assert_eq!(full, $str.parse().expect("toml::Datetime parse failed"));
+        };
+    }
 
     #[test]
     fn datetime_literals() {
-        let full = datetime().parse(b"1979-05-27T07:32:00Z").unwrap();
-        assert_eq!(full, "1979-05-27T07:32:00Z".parse().unwrap());
-
-        let full = datetime().parse(b"1979-05-27T00:32:00-07:00").unwrap();
-        assert_eq!(full, "1979-05-27T00:32:00-07:00".parse().unwrap());
-
-        let full = datetime()
-            .parse(b"1979-05-27T00:32:00.999999-07:00")
-            .unwrap();
-        assert_eq!(full, "1979-05-27T00:32:00.999999-07:00".parse().unwrap());
-
-        let full = datetime().parse(b"1979-05-27 07:32:00Z").unwrap();
-        assert_eq!(full, "1979-05-27 07:32:00Z".parse().unwrap());
-
-        let full_local = datetime().parse(b"1979-05-27T07:32:00").unwrap();
-        assert_eq!(full_local, "1979-05-27T07:32:00".parse().unwrap());
-
-        let full_local = datetime().parse(b"1979-05-27T00:32:00.999999").unwrap();
-        assert_eq!(full_local, "1979-05-27T00:32:00.999999".parse().unwrap());
+        assert_datetime_parses!("1979-05-27T07:32:00Z");
+        assert_datetime_parses!("1979-05-27T00:32:00-07:00");
+        assert_datetime_parses!("1979-05-27 07:32:00Z");
+        assert_datetime_parses!("1979-05-27T07:32:00");
+        assert_datetime_parses!("1979-05-27T00:32:00.999999");
     }
 
     #[test]
     fn date_literals() {
-        let date = datetime().parse(b"1979-05-27").unwrap();
-        assert_eq!(date, "1979-05-27".parse().unwrap());
+        assert_datetime_parses!("1979-05-27");
     }
 
     #[test]
     fn time_literals() {
-        let basic_time = datetime().parse(b"07:32:00").unwrap();
-        assert_eq!(basic_time, "07:32:00".parse().unwrap());
-
-        let precise_time = datetime().parse(b"07:32:00.999999").unwrap();
-        assert_eq!(precise_time, "07:32:00.999999".parse().unwrap());
+        assert_datetime_parses!("07:32:00");
+        assert_datetime_parses!("07:32:00.999999");
     }
 }

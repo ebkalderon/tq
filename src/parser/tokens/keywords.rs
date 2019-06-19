@@ -1,15 +1,20 @@
-use pom::char_class::alphanum;
-use pom::parser::*;
+use nom::branch::alt;
+use nom::bytes::complete::tag;
+use nom::character::complete::alphanumeric1;
+use nom::combinator::{not, peek};
+use nom::sequence::terminated;
+use nom::IResult;
 
 macro_rules! define_keywords {
     ($($function:ident => $keyword:tt),+) => {
-        pub fn keyword<'a>() -> Parser<'a, u8, &'a [u8]> {
-            ($($function())|+) - -not_a(alphanum)
+        pub fn keyword(input: &str) -> IResult<&str, &str> {
+            let terms = alt(($($function),+));
+            terminated(terms, peek(not(alphanumeric1)))(input)
         }
 
         $(
-            pub fn $function<'a>() -> Parser<'a, u8, &'a [u8]> {
-                seq(stringify!($keyword).as_bytes())
+            pub fn $function(input: &str) -> IResult<&str, &str> {
+                tag(stringify!($keyword))(input)
             }
         )+
     };

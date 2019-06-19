@@ -1,49 +1,62 @@
-use pom::parser::*;
+use nom::branch::alt;
+use nom::character::complete::char;
+use nom::combinator::{map, opt};
+use nom::multi::many0;
+use nom::sequence::{delimited, pair, preceded, terminated, tuple};
+use nom::IResult;
 
 use super::{expr, pattern, tokens};
 use crate::ast::{Expr, ExprForeach, ExprIfElse, ExprReduce, ExprTry};
 
-pub fn control_flow<'a>() -> Parser<'a, u8, Expr> {
-    foreach() | if_else() | reduce() | try_catch()
+pub fn control_flow(input: &str) -> IResult<&str, Expr> {
+    alt((foreach, if_else, reduce, try_catch))(input)
 }
 
-fn foreach<'a>() -> Parser<'a, u8, Expr> {
-    let bind = tokens::keyword_foreach() * pattern::binding() - sym(b'(');
-    let init = call(expr) - sym(b';');
-    let update = call(expr) - sym(b';');
-    let extract = call(expr) - sym(b')');
+fn foreach(input: &str) -> IResult<&str, Expr> {
+    let key_foreach = pair(tokens::keyword_foreach, tokens::space);
+    let bind = delimited(key_foreach, pattern::binding, tokens::space);
+    let init = delimited(pair(char('('), tokens::space), expr, char(';'));
+    let update = delimited(tokens::space, expr, pair(char(';'), tokens::space));
+    let extract = terminated(expr, char(')'));
 
-    let body = bind + init + update + extract;
-    body.map(|(((bind, init), update), extract)| ExprForeach::new(bind, init, update, extract))
-        .map(Box::from)
-        .map(Expr::Foreach)
+    let body = tuple((bind, init, update, extract));
+    let expr = map(body, |(b, i, u, e)| ExprForeach::new(b, i, u, e));
+    map(expr, |expr| Expr::Foreach(Box::new(expr)))(input)
 }
 
-fn if_else<'a>() -> Parser<'a, u8, Expr> {
-    use super::tokens::{keyword_elif, keyword_else, keyword_end, keyword_if, keyword_then};
+fn if_else(input: &str) -> IResult<&str, Expr> {
+    let key_if = pair(tokens::keyword_if, tokens::space);
+    let key_then = pair(tokens::keyword_then, tokens::space);
+    let main_clause = preceded(key_if, pair(expr, preceded(key_then, expr)));
 
-    let main_clause = keyword_if() * call(expr) + (keyword_then() * call(expr));
-    let alt_clauses = (keyword_elif() * call(expr) + (keyword_then() * call(expr))).repeat(0..);
-    let fallback = keyword_else() * call(expr) - keyword_end();
+    let key_elif = pair(tokens::keyword_elif, tokens::space);
+    let key_then = pair(tokens::keyword_then, tokens::space);
+    let alt_clauses = many0(preceded(key_elif, pair(expr, preceded(key_then, expr))));
 
-    (main_clause + alt_clauses + fallback)
-        .map(|((main, alt), f)| ExprIfElse::new(main, alt, f))
-        .map(Box::from)
-        .map(Expr::IfElse)
+    let key_else = pair(tokens::keyword_else, tokens::space);
+    let key_end = pair(tokens::keyword_end, tokens::space);
+    let fallback = preceded(key_else, terminated(expr, key_end));
+
+    let block = tuple((main_clause, alt_clauses, fallback));
+    let expr = map(block, |(main, alt, f)| ExprIfElse::new(main, alt, f));
+    map(expr, |expr| Expr::IfElse(Box::new(expr)))(input)
 }
 
-fn reduce<'a>() -> Parser<'a, u8, Expr> {
-    let bind = tokens::keyword_reduce() * pattern::binding() - sym(b'(');
-    let acc = call(expr) - sym(b';');
-    let eval = call(expr) - sym(b')');
+fn reduce(input: &str) -> IResult<&str, Expr> {
+    let key_reduce = pair(tokens::keyword_reduce, tokens::space);
+    let bind = delimited(key_reduce, pattern::binding, tokens::space);
+    let acc = delimited(pair(char('('), tokens::space), expr, char(';'));
+    let eval = delimited(tokens::space, expr, char(')'));
 
-    let body = bind + acc + eval;
-    body.map(|((bind, acc), eval)| ExprReduce::new(bind, acc, eval))
-        .map(Box::from)
-        .map(Expr::Reduce)
+    let body = tuple((bind, acc, eval));
+    let expr = map(body, |(bind, acc, eval)| ExprReduce::new(bind, acc, eval));
+    map(expr, |expr| Expr::Reduce(Box::new(expr)))(input)
 }
 
-fn try_catch<'a>() -> Parser<'a, u8, Expr> {
-    let block = tokens::keyword_try() * call(expr) + (tokens::keyword_catch() * call(expr)).opt();
-    block.map(|(expr, catch)| Expr::Try(Box::new(ExprTry::new(expr, catch))))
+fn try_catch(input: &str) -> IResult<&str, Expr> {
+    let key_try = pair(tokens::keyword_try, tokens::space);
+    let key_catch = pair(tokens::keyword_catch, tokens::space);
+    let block = preceded(key_try, pair(expr, opt(preceded(key_catch, expr))));
+    let expr = map(block, |(expr, catch)| ExprTry::new(expr, catch));
+    map(expr, |expr| Expr::Try(Box::new(expr)))(input)
 }

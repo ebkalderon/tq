@@ -1,91 +1,81 @@
 use std::f64;
 use std::str::{self, FromStr};
 
-use pom::char_class::{digit, hex_digit, oct_digit};
-use pom::parser::*;
+use nom::branch::alt;
+use nom::bytes::complete::{tag, take_while1};
+use nom::character::complete::{char, digit1, hex_digit1, oct_digit1, one_of};
+use nom::combinator::{map, map_res, opt, recognize};
+use nom::multi::many0;
+use nom::sequence::{pair, preceded, tuple};
+use nom::IResult;
 
-pub fn float<'a>() -> Parser<'a, u8, f64> {
-    float_literal() | float_inf_literal() | float_nan_literal()
+pub fn float(input: &str) -> IResult<&str, f64> {
+    alt((float_literal, float_inf_literal, float_nan_literal))(input)
 }
 
-fn float_literal<'a>() -> Parser<'a, u8, f64> {
-    let integer = number_sequence(digit);
-    let frac = sym(b'.') + number_sequence(digit);
-    let exp = one_of(b"eE") + one_of(b"+-").opt() + number_sequence(digit);
-    let number = one_of(b"-+").opt() + integer + frac + exp.opt();
-    let with_frac = number.collect();
+fn float_literal(input: &str) -> IResult<&str, f64> {
+    let frac = pair(char('.'), digit_sequence);
+    let exp = tuple((one_of("eE"), opt(one_of("+-")), digit_sequence));
+    let number = tuple((opt(one_of("-+")), digit_sequence, frac, opt(exp)));
+    let with_frac = recognize(number);
 
-    let integer = number_sequence(digit);
-    let frac = sym(b'.') + number_sequence(digit);
-    let exp = one_of(b"eE") + one_of(b"+-").opt() + number_sequence(digit);
-    let number = one_of(b"-+").opt() + integer + frac.opt() + exp;
-    let with_exp = number.collect();
+    let frac = pair(char('.'), digit_sequence);
+    let exp = tuple((one_of("eE"), opt(one_of("+-")), digit_sequence));
+    let number = tuple((opt(one_of("-+")), digit_sequence, opt(frac), exp));
+    let with_exp = recognize(number);
 
-    let float = with_frac | with_exp;
-    float
-        .convert(str::from_utf8)
-        .map(|digits| digits.replace('_', ""))
-        .convert(|digits| f64::from_str(&digits))
+    let float = alt((with_frac, with_exp));
+    map_res(float, |s| f64::from_str(&s.replace('_', "")))(input)
 }
 
-fn float_inf_literal<'a>() -> Parser<'a, u8, f64> {
-    let positive = sym(b'+').opt() * seq(b"inf").map(|_| f64::INFINITY);
-    let negative = sym(b'-') * seq(b"inf").map(|_| f64::NEG_INFINITY);
-    positive | negative
+fn float_inf_literal(input: &str) -> IResult<&str, f64> {
+    let positive = preceded(opt(char('+')), map(tag("inf"), |_| f64::INFINITY));
+    let negative = preceded(char('-'), map(tag("inf"), |_| f64::NEG_INFINITY));
+    alt((positive, negative))(input)
 }
 
-fn float_nan_literal<'a>() -> Parser<'a, u8, f64> {
-    let positive = sym(b'+').opt() * seq(b"nan").map(|_| f64::NAN);
-    let negative = sym(b'-') * seq(b"nan").map(|_| -f64::NAN);
-    positive | negative
+fn float_nan_literal(input: &str) -> IResult<&str, f64> {
+    let positive = preceded(opt(char('+')), map(tag("nan"), |_| f64::NAN));
+    let negative = preceded(char('-'), map(tag("nan"), |_| -f64::NAN));
+    alt((positive, negative))(input)
 }
 
-pub fn integer<'a>() -> Parser<'a, u8, i64> {
-    integer_bin_literal() | integer_hex_literal() | integer_oct_literal() | integer_literal()
+pub fn integer(input: &str) -> IResult<&str, i64> {
+    alt((
+        integer_bin_literal,
+        integer_hex_literal,
+        integer_oct_literal,
+        integer_literal,
+    ))(input)
 }
 
-fn integer_literal<'a>() -> Parser<'a, u8, i64> {
-    let digits = number_sequence(digit);
-    let int = one_of(b"+-").opt() + digits;
-    int.collect()
-        .convert(str::from_utf8)
-        .map(|digits| digits.replace('_', ""))
-        .convert(|digits| i64::from_str(&digits))
+fn integer_literal(input: &str) -> IResult<&str, i64> {
+    let int = recognize(pair(opt(one_of("+-")), digit_sequence));
+    map_res(int, |s: &str| i64::from_str(&s.replace('_', "")))(input)
 }
 
-fn integer_bin_literal<'a>() -> Parser<'a, u8, i64> {
-    let digits = number_sequence(|c| c == b'0' || c == b'1');
-    let bin = seq(b"0b") * digits;
-    bin.convert(str::from_utf8)
-        .map(|digits| digits.replace('_', ""))
-        .convert(|digits| i64::from_str_radix(&digits, 2))
+fn integer_bin_literal(input: &str) -> IResult<&str, i64> {
+    let prefix = take_while1(|c| c == '0' || c == '1');
+    let suffix = take_while1(|c| c == '0' || c == '1');
+    let digits = pair(prefix, many0(preceded(char('_'), suffix)));
+    let bin = preceded(tag("0b"), recognize(digits));
+    map_res(bin, |s: &str| i64::from_str_radix(&s.replace('_', ""), 2))(input)
 }
 
-fn integer_hex_literal<'a>() -> Parser<'a, u8, i64> {
-    let digits = number_sequence(hex_digit);
-    let hex = seq(b"0x") * digits;
-    hex.convert(str::from_utf8)
-        .map(|digits| digits.replace('_', ""))
-        .convert(|digits| i64::from_str_radix(&digits, 16))
+fn integer_hex_literal(input: &str) -> IResult<&str, i64> {
+    let digits = pair(hex_digit1, many0(preceded(char('_'), hex_digit1)));
+    let hex = preceded(tag("0x"), recognize(digits));
+    map_res(hex, |s: &str| i64::from_str_radix(&s.replace('_', ""), 16))(input)
 }
 
-fn integer_oct_literal<'a>() -> Parser<'a, u8, i64> {
-    let digits = number_sequence(oct_digit);
-    let oct = seq(b"0o") * digits;
-    oct.convert(str::from_utf8)
-        .map(|digits| digits.replace('_', ""))
-        .convert(|digits| i64::from_str_radix(&digits, 8))
+fn integer_oct_literal(input: &str) -> IResult<&str, i64> {
+    let digits = pair(oct_digit1, many0(preceded(char('_'), oct_digit1)));
+    let oct = preceded(tag("0o"), recognize(digits));
+    map_res(oct, |s: &str| i64::from_str_radix(&s.replace('_', ""), 8))(input)
 }
 
-fn number_sequence<'a, F>(predicate: F) -> Parser<'a, u8, &'a [u8]>
-where
-    F: Clone + Fn(u8) -> bool + 'a,
-{
-    let digits = is_a(predicate.clone()).repeat(1..);
-    let separator = sym(b'_');
-    let more = is_a(predicate).repeat(1..);
-    let sequence = digits + (separator * more).repeat(0..);
-    sequence.collect()
+fn digit_sequence(input: &str) -> IResult<&str, &str> {
+    recognize(pair(digit1, many0(preceded(char('_'), digit1))))(input)
 }
 
 #[cfg(test)]
@@ -93,6 +83,7 @@ mod tests {
     use std::f64::{EPSILON, INFINITY, NAN, NEG_INFINITY};
 
     use float_cmp::ApproxEq;
+    use nom::combinator::all_consuming;
 
     use super::*;
 
@@ -100,73 +91,73 @@ mod tests {
 
     #[test]
     fn integer_literals() {
-        let bare_integer = integer().parse(b"123").expect("bare integer failed");
+        let (_, bare_integer) = all_consuming(integer)("123").expect("bare integer failed");
         assert_eq!(bare_integer, 123);
 
-        let negative_integer = integer().parse(b"-42").expect("negative integer failed");
+        let (_, negative_integer) = all_consuming(integer)("-42").expect("negative integer failed");
         assert_eq!(negative_integer, -42);
 
-        let positive_integer = integer().parse(b"+1337").expect("positive integer failed");
-        assert_eq!(positive_integer, 1337);
+        let (_, positive_integer) = all_consuming(integer)("+21").expect("positive integer failed");
+        assert_eq!(positive_integer, 21);
     }
 
     #[test]
     fn integer_special_literals() {
-        let bin_literal = integer().parse(b"0b10101").expect("hex literal failed");
+        let (_, bin_literal) = all_consuming(integer)("0b10101").expect("bin literal failed");
         assert_eq!(bin_literal, 0b10101);
 
-        let hex_literal = integer().parse(b"0xabc").expect("hex literal failed");
+        let (_, hex_literal) = all_consuming(integer)("0xabc").expect("hex literal failed");
         assert_eq!(hex_literal, 0xabc);
 
-        let hex_literal = integer().parse(b"0xABC").expect("upper hex literal failed");
+        let (_, hex_literal) = all_consuming(integer)("0xABC").expect("upper hex literal failed");
         assert_eq!(hex_literal, 0xABC);
 
-        let oct_literal = integer().parse(b"0o123").expect("octal literal failed");
+        let (_, oct_literal) = all_consuming(integer)("0o123").expect("octal literal failed");
         assert_eq!(oct_literal, 0o123)
     }
 
     #[test]
     fn float_literals() {
-        let bare_frac_float = float().parse(b"1.23").expect("bare float failed");
+        let (_, bare_frac_float) = all_consuming(float)("1.23").expect("bare float failed");
         assert!(bare_frac_float.approx_eq(&1.23, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let neg_frac_float = float().parse(b"-2.5").expect("negative float failed");
+        let (_, neg_frac_float) = all_consuming(float)("-2.5").expect("negative float failed");
         assert!(neg_frac_float.approx_eq(&-2.5, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let pos_frac_float = float().parse(b"+0.01").expect("positive float failed");
+        let (_, pos_frac_float) = all_consuming(float)("+0.01").expect("positive float failed");
         assert!(pos_frac_float.approx_eq(&0.01, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let bare_exp_float = float().parse(b"6E4").expect("bare exp float failed");
+        let (_, bare_exp_float) = all_consuming(float)("6E4").expect("bare exp float failed");
         assert!(bare_exp_float.approx_eq(&6E4, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let neg_exp_float = float().parse(b"12E-3").expect("negative exp float failed");
+        let (_, neg_exp_float) = all_consuming(float)("12E-3").expect("negative exp float failed");
         assert!(neg_exp_float.approx_eq(&12E-3, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let pos_exp_float = float().parse(b"6E+5").expect("positive exp float failed");
+        let (_, pos_exp_float) = all_consuming(float)("6E+5").expect("positive exp float failed");
         assert!(pos_exp_float.approx_eq(&6E+5, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let mixed_float = float().parse(b"-3.6E4").expect("frac/exp float failed");
+        let (_, mixed_float) = all_consuming(float)("-3.6E4").expect("frac/exp float failed");
         assert!(mixed_float.approx_eq(&-3.6E4, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
     }
 
     #[test]
     fn float_special_literals() {
-        let bare_inf_literal = float().parse(b"inf").expect("bare inf literal failed");
+        let (_, bare_inf_literal) = all_consuming(float)("inf").expect("bare inf failed");
         assert!(bare_inf_literal.approx_eq(&INFINITY, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let neg_inf_literal = float().parse(b"-inf").expect("negative inf literal failed");
+        let (_, neg_inf_literal) = all_consuming(float)("-inf").expect("negative inf failed");
         assert!(neg_inf_literal.approx_eq(&NEG_INFINITY, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let pos_inf_literal = float().parse(b"+inf").expect("positive inf literal failed");
+        let (_, pos_inf_literal) = all_consuming(float)("+inf").expect("positive inf failed");
         assert!(pos_inf_literal.approx_eq(&INFINITY, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let bare_nan_literal = float().parse(b"nan").expect("bare nan literal failed");
+        let (_, bare_nan_literal) = all_consuming(float)("nan").expect("bare nan failed");
         assert!(bare_nan_literal.approx_eq(&NAN, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let neg_nan_literal = float().parse(b"-nan").expect("negative nan literal failed");
+        let (_, neg_nan_literal) = all_consuming(float)("-nan").expect("negative nan failed");
         assert!(neg_nan_literal.approx_eq(&-NAN, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
 
-        let pos_nan_literal = float().parse(b"+nan").expect("positive nan literal failed");
+        let (_, pos_nan_literal) = all_consuming(float)("+nan").expect("positive nan failed");
         assert!(pos_nan_literal.approx_eq(&NAN, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
     }
 }

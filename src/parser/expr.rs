@@ -1,12 +1,19 @@
+//! TODO: Need to improve Filter parsing and AST design.
+
 pub use self::function::function_decl;
 
-use pom::parser::*;
+use nom::branch::alt;
+use nom::bytes::complete::tag;
+use nom::character::complete::char;
+use nom::combinator::{map, opt};
+use nom::multi::many0;
+use nom::sequence::{delimited, pair, preceded, terminated, tuple};
+use nom::IResult;
 
 use self::construct::construct;
 use self::control_flow::control_flow;
 use self::filter::filter;
 use self::function::function_call;
-use self::index::index_slice;
 use self::label::{label_break, label_decl};
 use super::tokens;
 use crate::ast::*;
@@ -19,170 +26,185 @@ mod index;
 mod label;
 mod pattern;
 
-pub fn expr<'a>() -> Parser<'a, u8, Expr> {
-    fn_decl()
+pub fn expr(input: &str) -> IResult<&str, Expr> {
+    terminated(pipe, tokens::space)(input)
 }
 
-fn fn_decl<'a>() -> Parser<'a, u8, Expr> {
-    let expr = function_decl().repeat(0..) + call(binding);
-    expr.map(|(decls, expr)| {
+fn pipe(input: &str) -> IResult<&str, Expr> {
+    let pipe = pair(char('|'), tokens::space);
+    let expr = pair(chain, many0(preceded(pipe, chain)));
+    map(expr, |(first, rest)| {
+        rest.into_iter().fold(first, |lhs, rhs| {
+            Expr::Binary(BinaryOp::Pipe, Box::new(lhs), Box::new(rhs))
+        })
+    })(input)
+}
+
+fn chain(input: &str) -> IResult<&str, Expr> {
+    let comma = pair(char(','), tokens::space);
+    let expr = pair(fn_decl, many0(preceded(comma, fn_decl)));
+    map(expr, |(first, rest)| {
+        rest.into_iter().fold(first, |lhs, rhs| {
+            Expr::Binary(BinaryOp::Comma, Box::new(lhs), Box::new(rhs))
+        })
+    })(input)
+}
+
+fn fn_decl(input: &str) -> IResult<&str, Expr> {
+    let expr = pair(many0(terminated(function_decl, tokens::space)), binding);
+    map(expr, |(decls, expr)| {
         decls.into_iter().fold(expr, |expr, decl| {
             Expr::FnDecl(Box::new(decl), Box::new(expr))
         })
-    })
+    })(input)
 }
 
-fn binding<'a>() -> Parser<'a, u8, Expr> {
-    let bind = pattern::binding().map(Box::from).map(Expr::Binding) - sym(b'|');
-    let expr = bind.repeat(0..) + call(label);
-    expr.map(|(binds, expr)| {
-        binds.into_iter().rev().fold(expr, |expr, binding| {
-            Expr::Binary(BinaryOp::Pipe, Box::from(binding), Box::from(expr))
+fn binding(input: &str) -> IResult<&str, Expr> {
+    let binding = map(pattern::binding, |b| Expr::Binding(Box::new(b)));
+    let binding = terminated(binding, tuple((tokens::space, char('|'), tokens::space)));
+    let expr = pair(many0(binding), label);
+    map(expr, |(bindings, expr)| {
+        bindings.into_iter().fold(expr, |expr, binding| {
+            Expr::Binary(BinaryOp::Pipe, Box::new(binding), Box::new(expr))
         })
-    })
+    })(input)
 }
 
-fn label<'a>() -> Parser<'a, u8, Expr> {
-    let label = label_decl().map(Expr::Label) - sym(b'|');
-    let expr = label.repeat(0..) + call(pipe);
-    expr.map(|(labels, expr)| {
-        labels.into_iter().rev().fold(expr, |expr, label| {
-            Expr::Binary(BinaryOp::Pipe, Box::from(label), Box::from(expr))
+fn label(input: &str) -> IResult<&str, Expr> {
+    let label = map(label_decl, Expr::Label);
+    let label = terminated(label, tuple((tokens::space, char('|'), tokens::space)));
+    let expr = pair(many0(label), assign);
+    map(expr, |(decls, expr)| {
+        decls.into_iter().fold(expr, |expr, label| {
+            Expr::Binary(BinaryOp::Pipe, Box::new(label), Box::new(expr))
         })
-    })
+    })(input)
 }
 
-fn pipe<'a>() -> Parser<'a, u8, Expr> {
-    let expr = call(chain) + (sym(b'|') * call(expr)).repeat(0..);
-    expr.map(|(first, rest)| {
-        rest.into_iter().fold(first, |lhs, rhs| {
-            Expr::Binary(BinaryOp::Pipe, Box::from(lhs), Box::from(rhs))
-        })
-    })
-}
+fn assign(input: &str) -> IResult<&str, Expr> {
+    let alt_ = map(tag("//"), |_| BinaryOp::Alt);
+    let pipe = map(char('|'), |_| BinaryOp::Pipe);
+    let stream = alt((alt_, pipe));
 
-fn chain<'a>() -> Parser<'a, u8, Expr> {
-    let expr = call(assign_op) + (sym(b',') * call(expr)).repeat(0..);
-    expr.map(|(first, rest)| {
-        rest.into_iter().fold(first, |lhs, rhs| {
-            Expr::Binary(BinaryOp::Comma, Box::from(lhs), Box::from(rhs))
-        })
-    })
-}
+    let add = map(char('+'), |_| BinaryOp::Add);
+    let sub = map(char('-'), |_| BinaryOp::Sub);
+    let mul = map(char('*'), |_| BinaryOp::Mul);
+    let div = map(char('*'), |_| BinaryOp::Div);
+    let rem = map(char('%'), |_| BinaryOp::Mod);
+    let arithmetic = alt((add, sub, mul, div, rem));
 
-fn assign_op<'a>() -> Parser<'a, u8, Expr> {
-    let alt = seq(b"//").map(|_| BinaryOp::Alt);
-    let pipe = sym(b'|').map(|_| BinaryOp::Pipe);
-    let stream = alt | pipe;
-
-    let add = sym(b'+').map(|_| BinaryOp::Add);
-    let sub = sym(b'-').map(|_| BinaryOp::Sub);
-    let mul = sym(b'*').map(|_| BinaryOp::Mul);
-    let div = sym(b'/').map(|_| BinaryOp::Div);
-    let rem = sym(b'%').map(|_| BinaryOp::Mod);
-    let arithmetic = add | sub | mul | div | rem;
-
-    let expr = call(logical) + ((stream | arithmetic).opt() + (sym(b'=') * call(logical))).opt();
-    expr.map(|(expr, assign)| match assign {
-        Some((Some(op), rhs)) => Expr::AssignOp(op, Box::new(expr), Box::new(rhs)),
-        Some((None, rhs)) => Expr::Assign(Box::new(expr), Box::new(rhs)),
+    let op = terminated(opt(alt((arithmetic, stream))), char('='));
+    let expr = pair(logical, opt(pair(terminated(op, tokens::space), logical)));
+    map(expr, |(expr, assign)| match assign {
+        Some((Some(op), value)) => Expr::AssignOp(op, Box::new(expr), Box::new(value)),
+        Some((None, value)) => Expr::Assign(Box::new(expr), Box::new(value)),
         None => expr,
-    })
+    })(input)
 }
 
-fn logical<'a>() -> Parser<'a, u8, Expr> {
-    let and = tokens::keyword_and().map(|_| BinaryOp::And);
-    let or = tokens::keyword_or().map(|_| BinaryOp::Or);
-    let expr = call(compare) + ((and | or) + call(compare)).repeat(0..);
-    expr.map(|(first, rest)| {
+fn logical(input: &str) -> IResult<&str, Expr> {
+    let and = map(tag("and "), |_| BinaryOp::And);
+    let or = map(tag("or "), |_| BinaryOp::Or);
+    let op = terminated(alt((and, or)), tokens::space);
+    let expr = pair(compare, many0(pair(op, compare)));
+    map(expr, |(first, rest)| {
         rest.into_iter().fold(first, |lhs, (op, rhs)| {
-            Expr::Binary(op, Box::from(lhs), Box::from(rhs))
+            Expr::Binary(op, Box::new(lhs), Box::new(rhs))
         })
-    })
+    })(input)
 }
 
-fn compare<'a>() -> Parser<'a, u8, Expr> {
-    let eq = seq(b"==").map(|_| BinaryOp::Eq);
-    let neq = seq(b"!=").map(|_| BinaryOp::NotEq);
-    let equality = eq | neq;
+fn compare(input: &str) -> IResult<&str, Expr> {
+    let eq = map(tag("=="), |_| BinaryOp::Eq);
+    let neq = map(tag("!="), |_| BinaryOp::NotEq);
+    let equality = alt((eq, neq));
 
-    let lte = seq(b"<=").map(|_| BinaryOp::LessThanEq);
-    let lt = sym(b'<').map(|_| BinaryOp::LessThan);
-    let gte = seq(b">=").map(|_| BinaryOp::LessThanEq);
-    let gt = sym(b'>').map(|_| BinaryOp::LessThan);
-    let comparison = lte | lt | gte | gt;
+    let lte = map(tag("<="), |_| BinaryOp::LessThanEq);
+    let lt = map(char('<'), |_| BinaryOp::LessThan);
+    let gte = map(tag(">="), |_| BinaryOp::LessThanEq);
+    let gt = map(char('>'), |_| BinaryOp::LessThan);
+    let comparison = alt((lte, lt, gte, gt));
 
-    let expr = call(sum) + ((equality | comparison) + call(sum)).opt();
-    expr.map(|(expr, cmp)| match cmp {
-        Some((op, rhs)) => Expr::Binary(op, Box::from(expr), Box::from(rhs)),
+    let op = terminated(alt((equality, comparison)), tokens::space);
+    let expr = pair(sum, opt(pair(op, sum)));
+    map(expr, |(expr, cmp)| match cmp {
+        Some((op, rhs)) => Expr::Binary(op, Box::new(expr), Box::new(rhs)),
         None => expr,
-    })
+    })(input)
 }
 
-fn sum<'a>() -> Parser<'a, u8, Expr> {
-    let add = sym(b'+').map(|_| BinaryOp::Add);
-    let sub = sym(b'-').map(|_| BinaryOp::Sub);
-    let expr = call(product) + ((add | sub) + call(product)).repeat(0..);
-    expr.map(|(first, rest)| {
+fn sum(input: &str) -> IResult<&str, Expr> {
+    let add = map(char('+'), |_| BinaryOp::Add);
+    let sub = map(char('-'), |_| BinaryOp::Sub);
+    let op = terminated(alt((add, sub)), tokens::space);
+    let expr = pair(product, many0(pair(op, product)));
+    map(expr, |(first, rest)| {
         rest.into_iter().fold(first, |lhs, (op, rhs)| {
-            Expr::Binary(op, Box::from(lhs), Box::from(rhs))
+            Expr::Binary(op, Box::new(lhs), Box::new(rhs))
         })
-    })
+    })(input)
 }
 
-fn product<'a>() -> Parser<'a, u8, Expr> {
-    let alt = seq(b"//").map(|_| BinaryOp::Alt);
-    let mul = sym(b'*').map(|_| BinaryOp::Mul);
-    let div = sym(b'/').map(|_| BinaryOp::Div);
-    let rem = sym(b'%').map(|_| BinaryOp::Mod);
-    let expr = call(unary) + ((alt | mul | div | rem) + call(unary)).repeat(0..);
-    expr.map(|(first, rest)| {
+fn product(input: &str) -> IResult<&str, Expr> {
+    let alt_ = map(tag("//"), |_| BinaryOp::Alt);
+    let mul = map(char('*'), |_| BinaryOp::Mul);
+    let div = map(char('/'), |_| BinaryOp::Div);
+    let rem = map(char('%'), |_| BinaryOp::Mod);
+    let op = terminated(alt((alt_, mul, div, rem)), tokens::space);
+    let expr = pair(try_postfix, many0(pair(op, try_postfix)));
+    map(expr, |(first, rest)| {
         rest.into_iter().fold(first, |lhs, (op, rhs)| {
-            Expr::Binary(op, Box::from(lhs), Box::from(rhs))
+            Expr::Binary(op, Box::new(lhs), Box::new(rhs))
         })
-    })
+    })(input)
 }
 
-fn unary<'a>() -> Parser<'a, u8, Expr> {
-    let neg = sym(b'-').map(|_| UnaryOp::Neg);
-    let not = sym(b'!').map(|_| UnaryOp::Not);
-    let expr = (neg | not).opt() + call(try_postfix);
-    let expr = tokens::space() * expr - tokens::space();
-    expr.map(|(unary, term)| match unary {
-        Some(op) => Expr::Unary(op, Box::from(term)),
-        None => term,
-    })
+fn try_postfix(input: &str) -> IResult<&str, Expr> {
+    let expr = terminated(pair(unary, many0(char('?'))), tokens::space);
+    map(expr, |(expr, tries)| match !tries.is_empty() {
+        true => Expr::Try(Box::new(ExprTry::new(expr, None))),
+        false => expr,
+    })(input)
 }
 
-fn try_postfix<'a>() -> Parser<'a, u8, Expr> {
-    let expr = call(index) + sym(b'?').opt();
-    expr.map(|(term, is_try)| match is_try {
-        Some(_) => Expr::Try(Box::new(ExprTry::new(term, None))),
-        None => term,
-    })
+fn unary(input: &str) -> IResult<&str, Expr> {
+    let neg = map(char('-'), |_| UnaryOp::Neg);
+    let not = map(char('!'), |_| UnaryOp::Not);
+    let expr = pair(opt(alt((neg, not))), block);
+    map(expr, |(unary, expr)| match unary {
+        Some(op) => Expr::Unary(op, Box::new(expr)),
+        None => expr,
+    })(input)
 }
 
-fn index<'a>() -> Parser<'a, u8, Expr> {
-    let iter = (sym(b'[') + tokens::space() + sym(b']')).map(|_| ExprIndex::Iter);
-    let exact = sym(b'[') * call(expr).map(ExprIndex::Exact) - sym(b']');
-    let slice = index_slice().map(ExprIndex::Slice);
-    let expr = call(terms) + (iter | exact | slice).repeat(0..);
-    expr.map(|(term, indices)| {
-        indices.into_iter().fold(term, |expr, index| {
-            Expr::Index(Box::from(expr), Box::from(index))
+fn block(input: &str) -> IResult<&str, Expr> {
+    terminated(alt((control_flow, index)), tokens::space)(input)
+}
+
+fn index(input: &str) -> IResult<&str, Expr> {
+    let index = pair(index::index, map(opt(char('?')), |x| x.is_some()));
+    let expr = pair(term, many0(index));
+    map(expr, |(expr, index)| {
+        index.into_iter().fold(expr, |expr, (index, with_try)| {
+            let index = Expr::Index(Box::new(expr), Box::new(index));
+            if with_try {
+                Expr::Try(Box::new(ExprTry::new(index, None)))
+            } else {
+                index
+            }
         })
-    })
+    })(input)
 }
 
-fn terms<'a>() -> Parser<'a, u8, Expr> {
-    let paren = sym(b'(') * call(expr).map(Box::from).map(Expr::Paren) - sym(b')');
-    let control_flow = control_flow();
-    let label_break = label_break().map(Expr::Break);
-    let empty = tokens::keyword_empty().map(|_| Expr::Empty);
-    let filter = filter();
-    let construct = construct();
-    let literal = tokens::literal().map(Expr::Literal);
-    let fn_call = function_call().map(Expr::FnCall);
-    let variable = tokens::variable().map(Expr::Variable);
-    paren | control_flow | label_break | empty | filter | construct | literal | fn_call | variable
+fn term(input: &str) -> IResult<&str, Expr> {
+    let paren = delimited(pair(char('('), tokens::space), expr, char(')'));
+    let paren = map(paren, |e| Expr::Paren(Box::new(e)));
+    let literal = map(tokens::literal, Expr::Literal);
+    let brk = map(label_break, Expr::Break);
+    let empty = map(tag("empty"), |_| Expr::Empty);
+    let fn_call = map(function_call, Expr::FnCall);
+    let variable = map(tokens::variable, Expr::Variable);
+    alt((
+        paren, literal, brk, empty, filter, construct, variable, fn_call,
+    ))(input)
 }

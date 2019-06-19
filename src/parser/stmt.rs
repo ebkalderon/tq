@@ -1,104 +1,118 @@
 use std::path::PathBuf;
 
-use pom::parser::*;
+use nom::branch::alt;
+use nom::character::complete::char;
+use nom::combinator::{map, opt};
+use nom::multi::many0;
+use nom::sequence::{delimited, pair, preceded, terminated, tuple};
+use nom::IResult;
 
 use super::expr::expr;
 use super::tokens;
 use crate::ast::{Stmt, StmtImportMod, StmtImportToml, StmtInclude, Stmts};
 
-pub fn stmts<'a>() -> Parser<'a, u8, Stmts> {
-    let module = tokens::keyword_module() * tokens::space() * expr() - sym(b';');
-    let stmts = (tokens::space() * stmt()).repeat(0..);
-    (module.opt() + stmts).map(|(module, stmts)| Stmts::new(module, stmts))
+pub fn stmts(input: &str) -> IResult<&str, Stmts> {
+    let key_module = pair(tokens::keyword_module, tokens::space);
+    let module = opt(delimited(key_module, expr, char(';')));
+    let stmts = many0(preceded(tokens::space, stmt));
+    map(pair(module, stmts), |(module, stmts)| {
+        Stmts::new(module, stmts)
+    })(input)
 }
 
-fn stmt<'a>() -> Parser<'a, u8, Stmt> {
-    let import_toml = import_toml().map(Stmt::ImportToml);
-    let import_mod = import_mod().map(Stmt::ImportMod);
-    let include = include().map(Stmt::Include);
-    let stmt = import_mod | import_toml | include;
-    stmt - tokens::space() - sym(b';')
+fn stmt(input: &str) -> IResult<&str, Stmt> {
+    let import_toml = map(import_toml, Stmt::ImportToml);
+    let import_mod = map(import_mod, Stmt::ImportMod);
+    let include = map(include, Stmt::Include);
+    let stmt = alt((import_mod, import_toml, include));
+    terminated(stmt, pair(tokens::space, char(';')))(input)
 }
 
-fn import_toml<'a>() -> Parser<'a, u8, StmtImportToml> {
-    let keyword = tokens::keyword_import() + tokens::space();
-    let file = path_buf() - tokens::space() - tokens::keyword_as() - tokens::space();
-    let var = tokens::variable();
-    let metadata = expr().opt();
-    let stmt = keyword * file + var + metadata;
-    stmt.map(|((file, var), meta)| StmtImportToml::new(file, var, meta))
+fn import_toml(input: &str) -> IResult<&str, StmtImportToml> {
+    let keyword = pair(tokens::keyword_import, tokens::space);
+    let file = terminated(path_buf, pair(tokens::space, tokens::keyword_as));
+    let var = delimited(tokens::space, tokens::variable, tokens::space);
+    let metadata = opt(expr);
+    let stmt = preceded(keyword, tuple((file, var, metadata)));
+    map(stmt, |(file, var, meta)| {
+        StmtImportToml::new(file, var, meta)
+    })(input)
 }
 
-fn import_mod<'a>() -> Parser<'a, u8, StmtImportMod> {
-    let keyword = tokens::keyword_import() + tokens::space();
-    let file = path_buf() - tokens::space() - tokens::keyword_as() - tokens::space();
-    let path = tokens::ident_path();
-    let metadata = expr().opt();
-    let stmt = keyword * file + path + metadata;
-    stmt.map(|((file, path), meta)| StmtImportMod::new(file, path, meta))
+fn import_mod(input: &str) -> IResult<&str, StmtImportMod> {
+    let keyword = pair(tokens::keyword_import, tokens::space);
+    let file = terminated(path_buf, pair(tokens::space, tokens::keyword_as));
+    let path = delimited(tokens::space, tokens::ident_path, tokens::space);
+    let metadata = opt(expr);
+    let stmt = preceded(keyword, tuple((file, path, metadata)));
+    map(stmt, |(file, path, meta)| {
+        StmtImportMod::new(file, path, meta)
+    })(input)
 }
 
-fn include<'a>() -> Parser<'a, u8, StmtInclude> {
-    let keyword = tokens::keyword_include() + tokens::space();
-    let file = path_buf();
-    let metadata = expr().opt();
-    let stmt = keyword * file + metadata;
-    stmt.map(|(file, meta)| StmtInclude::new(file, meta))
+fn include(input: &str) -> IResult<&str, StmtInclude> {
+    let keyword = pair(tokens::keyword_include, tokens::space);
+    let file = terminated(path_buf, tokens::space);
+    let metadata = opt(expr);
+    let stmt = preceded(keyword, pair(file, metadata));
+    map(stmt, |(file, meta)| StmtInclude::new(file, meta))(input)
 }
 
-fn path_buf<'a>() -> Parser<'a, u8, PathBuf> {
-    tokens::string().map(PathBuf::from)
+fn path_buf(input: &str) -> IResult<&str, PathBuf> {
+    map(tokens::string, PathBuf::from)(input)
 }
 
 #[cfg(test)]
 mod tests {
+    use nom::combinator::all_consuming;
+
     use super::*;
     use crate::tq_stmts_and_str;
 
     #[test]
     fn empty() {
         let (expected, text) = tq_stmts_and_str!();
-        let actual = stmts().parse(text.as_bytes()).unwrap();
+        let (_, actual) = all_consuming(stmts)(&text).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn module() {
         let (expected, text) = tq_stmts_and_str!(module "metadata";);
-        let actual = stmts().parse(text.as_bytes()).unwrap();
+        let (_, actual) = all_consuming(stmts)(&text).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn import_mod() {
         let (expected, text) = tq_stmts_and_str!(import "path/to/mod" as FOO::BAR;);
-        let actual = stmts().parse(text.as_bytes()).unwrap();
+        let (_, actual) = all_consuming(stmts)(&text).unwrap();
         assert_eq!(expected, actual);
 
         let (expected, text) = tq_stmts_and_str!(import "path/to/mod" as FOO "meta";);
-        let actual = stmts().parse(text.as_bytes()).unwrap();
+        let (_, actual) = all_consuming(stmts)(&text).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn import_toml() {
         let (expected, text) = tq_stmts_and_str!(import "path/to/toml" as $foo;);
-        let actual = stmts().parse(text.as_bytes()).unwrap();
+        let (_, actual) = all_consuming(stmts)(&text).unwrap();
         assert_eq!(expected, actual);
 
         let (expected, text) = tq_stmts_and_str!(import "path/to/toml" as $foo "meta";);
-        let actual = stmts().parse(text.as_bytes()).unwrap();
+        let (_, actual) = all_consuming(stmts)(&text).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn include() {
         let (expected, text) = tq_stmts_and_str!(include "path/to/filter";);
-        let actual = stmts().parse(text.as_bytes()).unwrap();
+        let (_, actual) = all_consuming(stmts)(&text).unwrap();
         assert_eq!(expected, actual);
 
         let (expected, text) = tq_stmts_and_str!(include "path/to/filter" "meta";);
-        let actual = stmts().parse(text.as_bytes()).unwrap();
+        let (_, actual) = all_consuming(stmts)(&text).unwrap();
         assert_eq!(expected, actual);
     }
 
@@ -110,7 +124,7 @@ mod tests {
             import "bar" as $var;
             include "hello" "meta";
         };
-        let actual = stmts().parse(text.as_bytes()).unwrap();
+        let (_, actual) = all_consuming(stmts)(&text).unwrap();
         assert_eq!(expected, actual);
     }
 }

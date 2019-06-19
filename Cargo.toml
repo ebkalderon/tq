@@ -16,7 +16,7 @@ circle-ci = { repository = "ebkalderon/tq" }
 colored = "1.8.0"
 env_logger = "0.6.1"
 log = "0.4.6"
-pom = "3.0.2"
+nom = "5.0.0-beta2"
 regex = "1.1.6"
 structopt = "0.2.15"
 toml = "0.5.1"

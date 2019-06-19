@@ -1,47 +1,46 @@
-pub use self::error::{FilterError, ModuleError};
-
 use std::str::{self, FromStr};
 
-use pom::parser::*;
+use nom::combinator::all_consuming;
+use nom::multi::many0;
+use nom::sequence::{delimited, pair, preceded, terminated};
 
 use self::expr::{expr, function_decl};
 use self::stmt::stmts;
 use crate::ast::{Filter, Module};
 
-mod error;
 mod expr;
 mod stmt;
 mod tokens;
 
 impl FromStr for Filter {
-    type Err = FilterError;
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parse_filter(s)
     }
 }
 
-pub fn parse_filter<S: AsRef<str>>(filter: S) -> Result<Filter, FilterError> {
+pub fn parse_filter<S: AsRef<str>>(filter: S) -> Result<Filter, String> {
     let text = filter.as_ref();
-    (tokens::space() * stmts() + expr() - end())
-        .map(|(stmts, expr)| Filter::new(stmts, expr))
-        .parse(text.as_bytes())
-        .map_err(|e| FilterError::new(e, text))
+    let stmts = terminated(stmts, tokens::space);
+    all_consuming(preceded(tokens::space, pair(stmts, expr)))(text)
+        .map(|(_, (stmts, expr))| Filter::new(stmts, expr))
+        .map_err(|e| format!("{:?}", e))
 }
 
 impl FromStr for Module {
-    type Err = ModuleError;
+    type Err = String;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         parse_module(s)
     }
 }
 
-pub fn parse_module<S: AsRef<str>>(module: S) -> Result<Module, ModuleError> {
+pub fn parse_module<S: AsRef<str>>(module: S) -> Result<Module, String> {
     let text = module.as_ref();
-    let decls = function_decl().repeat(0..);
-    (tokens::space() * stmts() + decls - tokens::space() - end())
-        .map(|(stmts, decls)| Module::new(stmts, decls))
-        .parse(text.as_bytes())
-        .map_err(|e| ModuleError::new(e, text))
+    let stmts = terminated(stmts, tokens::space);
+    let decls = many0(terminated(function_decl, tokens::space));
+    all_consuming(delimited(tokens::space, pair(stmts, decls), tokens::space))(text)
+        .map(|(_, (stmts, decls))| Module::new(stmts, decls))
+        .map_err(|e| format!("{:?}", e))
 }
