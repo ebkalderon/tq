@@ -3,43 +3,48 @@ pub use self::literal::{literal, string};
 
 use std::iter;
 
-use pom::char_class::{alpha, alphanum, multispace};
-use pom::parser::*;
+use nom::branch::alt;
+use nom::bytes::complete::{is_a, tag};
+use nom::character::complete::{alpha1, alphanumeric1, char, multispace1, not_line_ending};
+use nom::combinator::{map, not, peek, recognize};
+use nom::multi::{count, many0, many1};
+use nom::sequence::{pair, preceded, terminated};
+use nom::IResult;
 
 use crate::ast::tokens::{FnParam, Ident, IdentPath, Variable};
 
 mod keywords;
 mod literal;
 
-pub fn space<'a>() -> Parser<'a, u8, ()> {
-    let comment = sym(b'#') - none_of(b"\n\r").repeat(0..);
-    let whitespace = is_a(multispace);
-    (comment | whitespace).repeat(0..).discard()
+pub fn space(input: &str) -> IResult<&str, ()> {
+    let comment = preceded(char('#'), not_line_ending);
+    let whitespace = multispace1;
+    map(many0(alt((comment, whitespace))), |_| ())(input)
 }
 
-pub fn identifier<'a>() -> Parser<'a, u8, Ident> {
-    let first = is_a(|c| alpha(c) || c == b'_' || c == b'-');
-    let rest = is_a(|c| alphanum(c) || c == b'_' || c == b'-');
-    (first + rest.repeat(0..))
-        .map(|(first, rest)| iter::once(first).chain(rest).collect())
-        .convert(String::from_utf8)
-        .map(Ident::from)
+pub fn identifier(input: &str) -> IResult<&str, Ident> {
+    let first = count(alt((alpha1, is_a("_-"))), 1);
+    let rest = many0(alt((alphanumeric1, is_a("_-"))));
+    map(recognize(pair(first, rest)), Ident::from)(input)
 }
 
-pub fn ident_path<'a>() -> Parser<'a, u8, IdentPath> {
-    let single = !keyword() * (identifier() - !seq(b"::")).repeat(1);
-    let multiple = (identifier() + (seq(b"::") * identifier()).repeat(1..))
-        .map(|(first, rest)| iter::once(first).chain(rest).collect());
+pub fn ident_path(input: &str) -> IResult<&str, IdentPath> {
+    let is_single_ident = terminated(identifier, peek(not(tag("::"))));
+    let ident = preceded(peek(not(keyword)), is_single_ident);
+    let single = map(ident, |x| vec![x]);
 
-    (single | multiple).map(IdentPath::from)
+    let seq = pair(identifier, many1(preceded(tag("::"), identifier)));
+    let multiple = map(seq, |(first, rest)| iter::once(first).chain(rest).collect());
+
+    map(alt((single, multiple)), IdentPath::from)(input)
 }
 
-pub fn variable<'a>() -> Parser<'a, u8, Variable> {
-    sym(b'$') * identifier().map(Variable::from)
+pub fn variable(input: &str) -> IResult<&str, Variable> {
+    map(preceded(char('$'), identifier), Variable::from)(input)
 }
 
-pub fn fn_param<'a>() -> Parser<'a, u8, FnParam> {
-    let function = ident_path().map(FnParam::Function);
-    let variable = variable().map(FnParam::Variable);
-    function | variable
+pub fn fn_param(input: &str) -> IResult<&str, FnParam> {
+    let function = map(ident_path, FnParam::Function);
+    let variable = map(variable, FnParam::Variable);
+    alt((function, variable))(input)
 }
