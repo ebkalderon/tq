@@ -43,54 +43,68 @@ mod tests {
     use nom::combinator::all_consuming;
 
     use super::*;
-    use crate::ast::Expr;
-    use crate::{tq_expr_and_str, tq_pattern};
 
-    fn parse_binding(s: &str) -> Result<Expr, String> {
-        all_consuming(binding)(s)
-            .map(|(_, bind)| Expr::Binding(Box::new(bind)))
-            .map_err(|e| format!("{:?}", e))
+    macro_rules! tq_pattern_with_str {
+        ($($pat:tt)*) => {
+            (
+                $crate::tq_pattern!($($pat)+),
+                stringify!($($pat)+).replace("$ ", "$"),
+            )
+        };
+    }
+
+    macro_rules! tq_binding_and_str {
+        ($($expr:tt)*) => {{
+            let (expr, string) = $crate::tq_expr_and_str!($($expr)+ | .);
+            match expr {
+                $crate::ast::Expr::Binary(_, lhs, _) => match *lhs {
+                    $crate::ast::Expr::Binding(bind) => (*bind, string.replace(" | .", "")),
+                    e => panic!(format!("tq_expr_and_str!() did not produce an `ExprBinding`: {:?}", e)),
+                }
+                _ => panic!("tq_expr_and_str!() did not produce an `Expr::Binary`"),
+            }
+        }};
     }
 
     #[test]
     fn pattern_array() {
-        let expected = tq_pattern!([$foo]);
-        let (_, actual) = all_consuming(pattern)("[$foo]").unwrap();
+        let (expected, string) = tq_pattern_with_str!([$foo]);
+        let (_, actual) = all_consuming(pattern)(&string).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn pattern_table() {
-        let expected = tq_pattern!({ foo = $bar });
-        let (_, actual) = all_consuming(pattern)("{ foo = $bar }").unwrap();
+        let (expected, string) = tq_pattern_with_str!({ foo = $bar });
+        let (_, actual) = all_consuming(pattern)(&string).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn pattern_variable() {
-        let expected = tq_pattern!($foo);
-        let (_, actual) = all_consuming(pattern)("$foo").unwrap();
+        let (expected, string) = tq_pattern_with_str!($foo);
+        let (_, actual) = all_consuming(pattern)(&string).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn binding_array() {
-        let (expected, expr) = tq_expr_and_str!(. as [$foo]);
-        let actual = parse_binding(&expr).unwrap();
+        let (expected, string) = tq_binding_and_str!(. as [$foo]);
+        let (_, actual) = all_consuming(binding)(&string).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn binding_table() {
-        let (expected, expr) = tq_expr_and_str!(. as { foo = $bar });
-        let actual = parse_binding(&expr).unwrap();
+        let (expected, string) = tq_binding_and_str!(. as { foo = $bar });
+        let (_, actual) = all_consuming(binding)(&string).unwrap();
         assert_eq!(expected, actual);
     }
 
     #[test]
     fn binding_variable() {
-        let (expected, expr) = tq_expr_and_str!(. as $foo);
-        let actual = parse_binding(&expr).unwrap();
+        let (expected, string) = tq_binding_and_str!(. as $foo);
+        let (_, actual) = all_consuming(binding)(&string).unwrap();
         assert_eq!(expected, actual);
     }
 }
