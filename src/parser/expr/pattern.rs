@@ -1,7 +1,7 @@
 use nom::branch::alt;
 use nom::character::complete::char;
 use nom::combinator::map;
-use nom::multi::separated_list;
+use nom::multi::separated_nonempty_list;
 use nom::sequence::{delimited, pair, preceded, terminated};
 use nom::IResult;
 
@@ -16,7 +16,7 @@ pub fn pattern(input: &str) -> IResult<&str, ExprPattern> {
 
 fn array(input: &str) -> IResult<&str, ExprPattern> {
     let pattern = terminated(pattern, tokens::space);
-    let patterns = separated_list(pair(char(','), tokens::space), pattern);
+    let patterns = separated_nonempty_list(pair(char(','), tokens::space), pattern);
     let blah = delimited(pair(char('['), tokens::space), patterns, char(']'));
     map(blah, ExprPattern::Array)(input)
 }
@@ -26,7 +26,7 @@ fn table(input: &str) -> IResult<&str, ExprPattern> {
     let value = terminated(pattern, tokens::space);
     let member = pair(key, preceded(pair(char('='), tokens::space), value));
 
-    let members = separated_list(pair(char(','), tokens::space), member);
+    let members = separated_nonempty_list(pair(char(','), tokens::space), member);
     let table = delimited(pair(char('{'), tokens::space), members, char('}'));
 
     map(table, ExprPattern::Table)(input)
