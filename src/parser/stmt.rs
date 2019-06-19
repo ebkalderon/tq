@@ -67,7 +67,18 @@ mod tests {
     use nom::combinator::all_consuming;
 
     use super::*;
-    use crate::tq_stmts_and_str;
+
+    macro_rules! tq_stmts_and_str {
+        ($($stmts:tt)*) => {
+            (
+                $crate::tq_stmts!($($stmts)*),
+                stringify!($($stmts)*)
+                    .replace('\n', " ")
+                    .replace(" :: ", "::")
+                    .replace("$ ", "$"),
+            )
+        };
+    }
 
     #[test]
     fn empty() {
