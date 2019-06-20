@@ -210,9 +210,9 @@ pub enum Expr {
     /// `{ foo = 1, bar = 2 }[]`
     Index(Box<Expr>, Box<ExprIndex>),
 
-    /// `.package as $pkg`
-    /// `.package as { name = $name, authors = $authors }`
-    Binding(Box<ExprBinding>),
+    /// `.package as $pkg | ...`
+    /// `.package as { name = $name, authors = $authors } | ...`
+    Binding(Box<ExprBinding>, Box<Expr>),
 
     /// `def increment: . + 1;`
     /// `def addvalue(f): f as $f | map(. + $f);`
@@ -268,7 +268,7 @@ impl Display for Expr {
 
             Expr::Filter(ref filter) => write!(fmt, "{}", filter),
             Expr::Index(ref expr, ref index) => write!(fmt, "{}{}", expr, index),
-            Expr::Binding(ref binding) => write!(fmt, "{}", binding),
+            Expr::Binding(ref binding, ref expr) => write!(fmt, "{} | {}", binding, expr),
 
             Expr::FnDecl(ref decl, ref expr) => write!(fmt, "{} {}", decl, expr),
             Expr::FnCall(ref call) => write!(fmt, "{}", call),

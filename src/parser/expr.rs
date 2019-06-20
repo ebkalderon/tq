@@ -60,12 +60,11 @@ fn fn_decl(input: &str) -> IResult<&str, Expr> {
 }
 
 fn binding(input: &str) -> IResult<&str, Expr> {
-    let binding = map(pattern::binding, |b| Expr::Binding(Box::new(b)));
-    let binding = terminated(binding, tuple((tokens::space, char('|'), tokens::space)));
-    let expr = pair(many0(binding), label);
+    let pipe = tuple((tokens::space, char('|'), tokens::space));
+    let expr = pair(many0(terminated(pattern::binding, pipe)), label);
     map(expr, |(bindings, expr)| {
         bindings.into_iter().rev().fold(expr, |expr, binding| {
-            Expr::Binary(BinaryOp::Pipe, Box::new(binding), Box::new(expr))
+            Expr::Binding(Box::new(binding), Box::new(expr))
         })
     })(input)
 }

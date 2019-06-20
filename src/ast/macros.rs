@@ -412,22 +412,19 @@ macro_rules! pipe {
     (@rule ($($expr:tt)+) as [ $($pat:tt)+ ] | $($rest:tt)+) => {{
         let pat = $crate::tq_pattern!([ $($pat)+ ]);
         let bind = ExprBinding::new($crate::term!($($expr)+), pat);
-        let expr = Expr::Binding(Box::new(bind));
-        Expr::Binary(BinaryOp::Pipe, Box::new(expr), Box::new($crate::pipe!($($rest)+)))
+        Expr::Binding(Box::new(bind), Box::new($crate::pipe!($($rest)+)))
     }};
 
     (@rule ($($expr:tt)+) as { $($pat:tt)+ } | $($rest:tt)+) => {{
         let pat = $crate::tq_pattern!({ $($pat)+ });
         let bind = ExprBinding::new($crate::term!($($expr)+), pat);
-        let expr = Expr::Binding(Box::new(bind));
-        Expr::Binary(BinaryOp::Pipe, Box::new(expr), Box::new($crate::pipe!($($rest)+)))
+        Expr::Binding(Box::new(bind), Box::new($crate::pipe!($($rest)+)))
     }};
 
     (@rule ($($expr:tt)+) as $dollar:tt $var:ident | $($rest:tt)+) => {{
         let pat = $crate::tq_pattern!($dollar$var);
         let bind = ExprBinding::new($crate::term!($($expr)+), pat);
-        let expr = Expr::Binding(Box::new(bind));
-        Expr::Binary(BinaryOp::Pipe, Box::new(expr), Box::new($crate::pipe!($($rest)+)))
+        Expr::Binding(Box::new(bind), Box::new($crate::pipe!($($rest)+)))
     }};
 
     (@rule ($($lhs:tt)+) | $($rhs:tt)+) => {{
