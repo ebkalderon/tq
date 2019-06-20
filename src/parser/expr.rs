@@ -53,7 +53,7 @@ fn chain(input: &str) -> IResult<&str, Expr> {
 fn fn_decl(input: &str) -> IResult<&str, Expr> {
     let expr = pair(many0(terminated(function_decl, tokens::space)), binding);
     map(expr, |(decls, expr)| {
-        decls.into_iter().fold(expr, |expr, decl| {
+        decls.into_iter().rev().fold(expr, |expr, decl| {
             Expr::FnDecl(Box::new(decl), Box::new(expr))
         })
     })(input)
@@ -64,7 +64,7 @@ fn binding(input: &str) -> IResult<&str, Expr> {
     let binding = terminated(binding, tuple((tokens::space, char('|'), tokens::space)));
     let expr = pair(many0(binding), label);
     map(expr, |(bindings, expr)| {
-        bindings.into_iter().fold(expr, |expr, binding| {
+        bindings.into_iter().rev().fold(expr, |expr, binding| {
             Expr::Binary(BinaryOp::Pipe, Box::new(binding), Box::new(expr))
         })
     })(input)
@@ -75,7 +75,7 @@ fn label(input: &str) -> IResult<&str, Expr> {
     let label = terminated(label, tuple((tokens::space, char('|'), tokens::space)));
     let expr = pair(many0(label), assign);
     map(expr, |(decls, expr)| {
-        decls.into_iter().fold(expr, |expr, label| {
+        decls.into_iter().rev().fold(expr, |expr, label| {
             Expr::Binary(BinaryOp::Pipe, Box::new(label), Box::new(expr))
         })
     })(input)
