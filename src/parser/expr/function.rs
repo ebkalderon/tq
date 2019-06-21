@@ -28,15 +28,14 @@ pub fn function_call(input: &str) -> IResult<&str, ExprFnCall> {
 fn opt_param_sequence(input: &str) -> IResult<&str, Vec<FnParam>> {
     let param = delimited(tokens::space, tokens::fn_param, tokens::space);
     let params = separated_nonempty_list(char(';'), param);
-    let open = pair(tokens::space, char('('));
-    let seq = delimited(open, params, pair(char(')'), tokens::space));
+    let seq = delimited(pair(tokens::space, char('(')), params, char(')'));
     map(opt(seq), Option::unwrap_or_default)(input)
 }
 
 fn opt_arg_sequence(input: &str) -> IResult<&str, Vec<Expr>> {
     let args = separated_nonempty_list(pair(char(';'), tokens::space), expr);
     let open = tuple((tokens::space, char('('), tokens::space));
-    let seq = delimited(open, args, pair(char(')'), tokens::space));
+    let seq = delimited(open, args, char(')'));
     map(opt(seq), Option::unwrap_or_default)(input)
 }
 
@@ -59,8 +58,9 @@ mod tests {
     macro_rules! tq_fn_decl_and_str {
         ($($expr:tt)+) => {{
             let (expr, string) = $crate::tq_expr_and_str!($($expr)+ .);
+            let trimmed = string.trim().replace(" :", ":").trim_end_matches(" .").to_string();
             match expr {
-                $crate::ast::Expr::FnDecl(decl, _) => (*decl, string.trim().trim_end_matches(" .").to_string()),
+                $crate::ast::Expr::FnDecl(decl, _) => (*decl, trimmed),
                 e => panic!(format!("tq_expr_and_str!() did not produce an `ExprFnDecl`: {:?}", e)),
             }
         }};
