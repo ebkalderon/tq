@@ -401,7 +401,11 @@ macro_rules! tq_token {
         $crate::ast::tokens::Ident::from(stringify!($ident))
     };
 
-    ( $(::)? $($path:ident)::+ ) => {
+    ( $($path:ident)::+ ) => {
+        $crate::ast::tokens::IdentPath::from(vec![$(stringify!($path)),*])
+    };
+
+    ( ::$($path:ident)::+ ) => {
         $crate::ast::tokens::IdentPath::from(vec![$(stringify!($path)),*])
     };
 
