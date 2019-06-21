@@ -14,10 +14,5 @@ fn parse_builtin(b: &mut Criterion) {
     });
 }
 
-criterion_group! {
-    name = benches;
-    config = Criterion::default().sample_size(10);
-    targets = parse_builtin
-}
-
+criterion_group!(benches, parse_builtin);
 criterion_main!(benches);
