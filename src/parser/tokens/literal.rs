@@ -38,12 +38,56 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn boolean_literals() {
-        let (_, true_literal) = all_consuming(boolean)("true").unwrap();
-        assert_eq!(true_literal, true);
+    macro_rules! tq_literal_and_str {
+        ($literal:expr) => {{
+            let (expr, string) = $crate::tq_expr_and_str!($literal);
+            match expr {
+                $crate::ast::Expr::Literal(lit) => (lit, string),
+                e => panic!(format!(
+                    "tq_expr_and_str!() did not produce a `Literal`: {:?}",
+                    e
+                )),
+            }
+        }};
+    }
 
-        let (_, false_literal) = all_consuming(boolean)("false").unwrap();
-        assert_eq!(false_literal, false);
+    #[test]
+    fn boolean() {
+        let (expected, string) = tq_literal_and_str!(false);
+        let (_, actual) = all_consuming(literal)(&string).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, string) = tq_literal_and_str!(true);
+        let (_, actual) = all_consuming(literal)(&string).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn float() {
+        let (expected, string) = tq_literal_and_str!(12.5);
+        let (_, actual) = all_consuming(literal)(&string).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, string) = tq_literal_and_str!(12E6);
+        let (_, actual) = all_consuming(literal)(&string).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, string) = tq_literal_and_str!(12.5E6);
+        let (_, actual) = all_consuming(literal)(&string).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn integer() {
+        let (expected, string) = tq_literal_and_str!(1234);
+        let (_, actual) = all_consuming(literal)(&string).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn string() {
+        let (expected, string) = tq_literal_and_str!("hello world\n");
+        let (_, actual) = all_consuming(literal)(&string).unwrap();
+        assert_eq!(expected, actual);
     }
 }
