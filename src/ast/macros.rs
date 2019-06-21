@@ -353,20 +353,20 @@ macro_rules! tq_fn_args {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! tq_fn_params {
-    (@args ($($arg:tt)+) ; $($rest:tt)+) => {
-        ::std::iter::once($crate::tq_fn_params!($($arg)+)).chain($crate::tq_fn_params!($($rest)+))
+    (@params ($($arg:tt)+) ; $($rest:tt)+) => {
+        ::std::iter::once($crate::tq_fn_params!($($arg)+)).flatten().chain($crate::tq_fn_params!($($rest)+))
     };
 
-    (@args ($($path:ident)::+)) => {{
+    (@params ($($path:ident)::+)) => {
         ::std::iter::once(FnParam::Function($crate::tq_token!(::$($path)::+)))
-    }};
-
-    (@args ($($expr:tt)+)) => {
-        ::std::iter::once($crate::tq_expr!($($expr)+))
     };
 
-    (@args ($($prev:tt)*) $next:tt $($rest:tt)* ) => {
-        $crate::tq_fn_args!(@args ($($prev)* $next) $($rest)*)
+    (@params ($dollar:tt $var:ident)) => {
+        ::std::iter::once(FnParam::Variable($crate::tq_token!($dollar$var)))
+    };
+
+    (@params ($($prev:tt)*) $next:tt $($rest:tt)* ) => {
+        $crate::tq_fn_params!(@params ($($prev)* $next) $($rest)*)
     };
 
     ( $first:tt $($rest:tt)* ) => {{
@@ -374,7 +374,7 @@ macro_rules! tq_fn_params {
         use $crate::ast::*;
         #[allow(unused_imports)]
         use $crate::ast::tokens::*;
-        $crate::tq_fn_args!(@args ($first) $($rest)*)
+        $crate::tq_fn_params!(@params ($first) $($rest)*)
     }};
 }
 
@@ -541,7 +541,7 @@ macro_rules! fn_decl {
         let name = $crate::tq_token!(::$($name)::+);
         let args = $crate::tq_fn_params!($($args)+).collect();
         let (body, expr) = $crate::fn_decl!($($rest)+);
-        Expr::FnDecl(Box::new(ExprFnDecl::new(name, Vec::new(), body)), Box::new(expr))
+        Expr::FnDecl(Box::new(ExprFnDecl::new(name, args, body)), Box::new(expr))
     }};
 
     (@rule ($($prev:tt)+) ; $($rest:tt)+) => {
