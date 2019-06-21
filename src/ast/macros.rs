@@ -120,9 +120,7 @@ macro_rules! tq_stmts {
     };
 
     (@stmt import $file:tt as $($path:ident)::+ ; $($rest:tt)*) => {{
-        let path = IdentPath::from(vec![$(stringify!($path)),+]);
-        let stmt = StmtImportMod::new($file.into(), path, None);
-
+        let stmt = StmtImportMod::new($file.into(), $crate::tq_token!(::$($path)::+), None);
         let first = ::std::iter::once(Stmt::ImportMod(stmt));
         let rest = $crate::tq_stmts!(@stmt $($rest)*);
         first.chain(rest)
@@ -130,9 +128,7 @@ macro_rules! tq_stmts {
 
     (@stmt import $file:tt as $($path:ident)::+ $meta:tt ; $($rest:tt)*) => {{
         let module = Some($crate::tq_expr!($meta));
-        let path = IdentPath::from(vec![$(stringify!($path)),+]);
-        let stmt = StmtImportMod::new($file.into(), path, module);
-
+        let stmt = StmtImportMod::new($file.into(), $crate::tq_token!(::$($path)::+), module);
         let first = ::std::iter::once(Stmt::ImportMod(stmt));
         let rest = $crate::tq_stmts!(@stmt $($rest)*);
         first.chain(rest)
@@ -332,6 +328,58 @@ macro_rules! tq_filter {
 
 #[doc(hidden)]
 #[macro_export]
+macro_rules! tq_fn_args {
+    (@args ($($expr:tt)+) ; $($rest:tt)+) => {
+        ::std::iter::once($crate::tq_expr!($($expr)+)).chain($crate::tq_fn_args!($($rest)+))
+    };
+
+    (@args ($($expr:tt)+)) => {
+        ::std::iter::once($crate::tq_expr!($($expr)+))
+    };
+
+    (@args ($($prev:tt)*) $next:tt $($rest:tt)* ) => {
+        $crate::tq_fn_args!(@args ($($prev)* $next) $($rest)*)
+    };
+
+    ( $first:tt $($rest:tt)* ) => {{
+        #[allow(unused_imports)]
+        use $crate::ast::*;
+        #[allow(unused_imports)]
+        use $crate::ast::tokens::*;
+        $crate::tq_fn_args!(@args ($first) $($rest)*)
+    }};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! tq_fn_params {
+    (@params ($($arg:tt)+) ; $($rest:tt)+) => {
+        ::std::iter::once($crate::tq_fn_params!($($arg)+)).flatten().chain($crate::tq_fn_params!($($rest)+))
+    };
+
+    (@params ($($path:ident)::+)) => {
+        ::std::iter::once(FnParam::Function($crate::tq_token!(::$($path)::+)))
+    };
+
+    (@params ($dollar:tt $var:ident)) => {
+        ::std::iter::once(FnParam::Variable($crate::tq_token!($dollar$var)))
+    };
+
+    (@params ($($prev:tt)*) $next:tt $($rest:tt)* ) => {
+        $crate::tq_fn_params!(@params ($($prev)* $next) $($rest)*)
+    };
+
+    ( $first:tt $($rest:tt)* ) => {{
+        #[allow(unused_imports)]
+        use $crate::ast::*;
+        #[allow(unused_imports)]
+        use $crate::ast::tokens::*;
+        $crate::tq_fn_params!(@params ($first) $($rest)*)
+    }};
+}
+
+#[doc(hidden)]
+#[macro_export]
 macro_rules! tq_token {
     ( false ) => {
         $crate::ast::tokens::Literal::Boolean(false)
@@ -351,6 +399,14 @@ macro_rules! tq_token {
 
     ( $ident:ident ) => {
         $crate::ast::tokens::Ident::from(stringify!($ident))
+    };
+
+    ( $($path:ident)::+ ) => {
+        $crate::ast::tokens::IdentPath::from(vec![$(stringify!($path)),*])
+    };
+
+    ( ::$($path:ident)::+ ) => {
+        $crate::ast::tokens::IdentPath::from(vec![$(stringify!($path)),*])
     };
 
     ( $dollar:tt $var:ident ) => {
@@ -480,9 +536,16 @@ macro_rules! chain {
 #[macro_export]
 macro_rules! fn_decl {
     (@rule (def $($name:ident)::+) : $($rest:tt)+) => {{
-        let name = IdentPath::from(vec![$(stringify!($name)),+]);
+        let name = $crate::tq_token!(::$($name)::+);
         let (body, expr) = $crate::fn_decl!($($rest)+);
         Expr::FnDecl(Box::new(ExprFnDecl::new(name, Vec::new(), body)), Box::new(expr))
+    }};
+
+    (@rule (def $($name:ident)::+) ($($args:tt)+) : $($rest:tt)+) => {{
+        let name = $crate::tq_token!(::$($name)::+);
+        let args = $crate::tq_fn_params!($($args)+).collect();
+        let (body, expr) = $crate::fn_decl!($($rest)+);
+        Expr::FnDecl(Box::new(ExprFnDecl::new(name, args, body)), Box::new(expr))
     }};
 
     (@rule ($($prev:tt)+) ; $($rest:tt)+) => {
@@ -636,35 +699,50 @@ macro_rules! unary {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! term {
-    (@rule (($($expr:tt)+))) => {{
+    (($($expr:tt)+)) => {{
         Expr::Paren(Box::new($crate::tq_expr!($($expr)+)))
     }};
 
-    (@rule (..)) => {{
+    (..) => {{
         Expr::Filter(Box::new($crate::tq_filter!(..)))
     }};
 
-    (@rule (.$($path:tt)*)) => {{
+    (.$($path:tt)*) => {{
         Expr::Filter(Box::new($crate::tq_filter!(.$($path)*)))
     }};
 
-    (@rule ($dollar:tt $var:ident)) => {{
+    ($dollar:tt $var:ident) => {{
         Expr::Variable($crate::tq_token!($dollar$var))
     }};
 
-    (@rule ($literal:tt)) => {{
-        Expr::Literal($crate::tq_token!($literal))
+    (false) => {{
+        Expr::Literal($crate::tq_token!(false))
     }};
 
-    (@rule ($($prev:tt)*) $next:tt $($rest:tt)* ) => {
-        $crate::term!(@rule ($($prev)* $next) $($rest)*)
-    };
+    (true) => {{
+        Expr::Literal($crate::tq_token!(true))
+    }};
 
-    ( $first:tt $($rest:tt)* ) => {{
-        #[allow(unused_imports)]
-        use $crate::ast::*;
-        #[allow(unused_imports)]
-        use $crate::ast::tokens::*;
-        $crate::term!(@rule ($first) $($rest)*)
+    (inf) => {{
+        Expr::Literal($crate::tq_token!(inf))
+    }};
+
+    (nan) => {{
+        Expr::Literal($crate::tq_token!(nan))
+    }};
+
+    ($($fn_call:ident)::+) => {{
+        let path = $crate::tq_token!(::$($fn_call)::+);
+        Expr::FnCall(ExprFnCall::new(path, Vec::new()))
+    }};
+
+    ($($fn_call:ident)::+ ($($args:tt)+)) => {{
+        let path = $crate::tq_token!(::$($fn_call)::+);
+        let args = $crate::tq_fn_args!($($args)+).collect();
+        Expr::FnCall(ExprFnCall::new(path, args))
+    }};
+
+    ($literal:expr) => {{
+        Expr::Literal($crate::tq_token!($literal))
     }};
 }
