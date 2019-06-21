@@ -467,7 +467,7 @@ macro_rules! chain {
     };
 
     (@rule ($($expr:tt)+)) => {
-        $crate::sum!($($expr)+)
+        $crate::fn_decl!($($expr)+)
     };
 
     ( $first:tt $($rest:tt)* ) => {{
@@ -476,6 +476,36 @@ macro_rules! chain {
         #[allow(unused_imports)]
         use $crate::ast::tokens::*;
         $crate::chain!(@rule ($first) $($rest)*)
+    }};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! fn_decl {
+    (@rule (def $($name:ident)::+) : $($rest:tt)+) => {{
+        let name = IdentPath::from(vec![$(stringify!($name)),+]);
+        let (body, expr) = $crate::fn_decl!($($rest)+);
+        Expr::FnDecl(Box::new(ExprFnDecl::new(name, Vec::new(), body)), Box::new(expr))
+    }};
+
+    (@rule ($($prev:tt)+) ; $($rest:tt)+) => {
+        ($crate::tq_expr!($($prev)+), $crate::fn_decl!($($rest)+))
+    };
+
+    (@rule ($($prev:tt)*) $next:tt $($rest:tt)*) => {
+        $crate::fn_decl!(@rule ($($prev)* $next) $($rest)*)
+    };
+
+    (@rule ($($expr:tt)+)) => {
+        $crate::sum!($($expr)+)
+    };
+
+    ( $first:tt $($rest:tt)* ) => {{
+        #[allow(unused_imports)]
+        use $crate::ast::*;
+        #[allow(unused_imports)]
+        use $crate::ast::tokens::*;
+        $crate::fn_decl!(@rule ($first) $($rest)*)
     }};
 }
 
@@ -561,11 +591,7 @@ macro_rules! product {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! try_postfix {
-    (@rule ($($expr:tt)+) ? $($rest:tt)+) => {{
-        $crate::try_postfix!($($expr)+)
-    }};
-
-    (@rule ($($expr:tt)+) ?) => {{
+    (@rule ($($expr:tt)+) $(?)+) => {{
         Expr::Try(Box::new(ExprTry::new($crate::unary!($($expr)+), None)))
     }};
 
