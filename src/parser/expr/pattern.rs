@@ -57,11 +57,8 @@ mod tests {
         ($($expr:tt)*) => {{
             let (expr, string) = $crate::tq_expr_and_str!($($expr)+ | .);
             match expr {
-                $crate::ast::Expr::Binary(_, lhs, _) => match *lhs {
-                    $crate::ast::Expr::Binding(bind) => (*bind, string.replace(" | .", "")),
-                    e => panic!(format!("tq_expr_and_str!() did not produce an `ExprBinding`: {:?}", e)),
-                }
-                _ => panic!("tq_expr_and_str!() did not produce an `Expr::Binary`"),
+                $crate::ast::Expr::Binding(bind, _) => (*bind, string.replace(" | .", "")),
+                e => panic!(format!("tq_expr_and_str!() did not produce an `Expr::Binding`: {:?}", e)),
             }
         }};
     }
