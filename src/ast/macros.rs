@@ -207,7 +207,7 @@ macro_rules! tq_table_key {
     };
 
     ( $dollar:tt $var:ident ) => {
-        $crate::ast::TableKey::Variable($crate::tq_token!($dollar$ident))
+        $crate::ast::TableKey::Variable($crate::tq_token!($dollar$var))
     };
 }
 
@@ -269,6 +269,26 @@ macro_rules! tq_index {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! tq_filter {
+    // Final path segment is an identifier-style field.
+    (@path .$field:ident) => {
+        ::std::iter::once($crate::tq_filter!(.$field))
+    };
+
+    // Next path segment is an identifier-style field.
+    (@path .$field:ident $($rest:tt)+) => {
+        $crate::tq_filter!(@path .$field).chain($crate::tq_filter!(@path $($rest)+))
+    };
+
+    // Final path segment is a slice-style field.
+    (@path [$($expr:tt)*]) => {
+        ::std::iter::once($crate::tq_filter!(.[$($expr)*]))
+    };
+
+    // Next path segment is a slice-style field.
+    (@path [$($expr:tt)*] $($rest:tt)+) => {
+        $crate::tq_filter!(@path [$($expr)*]).chain($crate::tq_filter!(@path $($rest)+))
+    };
+
     // Identity filter literal.
     (.) => {
         ExprFilter::Identity
@@ -305,24 +325,12 @@ macro_rules! tq_filter {
             })
     };
 
-    // Final path segment is an identifier-style field.
-    (@path .$field:ident) => {
-        ::std::iter::once($crate::tq_filter!(.$field))
-    };
-
-    // Next path segment is an identifier-style field.
-    (@path .$field:ident $($rest:tt)+) => {
-        $crate::tq_filter!(@path .$field).chain($crate::tq_filter!(@path $($rest)+))
-    };
-
-    // Final path segment is a slice-style field.
-    (@path [$($expr:tt)*]) => {
-        ::std::iter::once($crate::tq_filter!(.[$($expr)*]))
-    };
-
-    // Next path segment is a slice-style field.
-    (@path [$($expr:tt)*] $($rest:tt)+) => {
-        $crate::tq_filter!(@path [$($expr)*]).chain($crate::tq_filter!(@path $($rest)+))
+    // Nested path indexing into a variable.
+    ( $dollar:tt $var:ident $($rest:tt)+ ) => {
+        $crate::tq_filter!(@path $($rest)+)
+            .fold(ExprFilter::Variable($crate::tq_token!($dollar$var)), |seq, next| {
+                ExprFilter::Path(Box::new(seq), Box::new(next))
+            })
     };
 }
 
@@ -709,6 +717,10 @@ macro_rules! term {
 
     (.$($path:tt)*) => {{
         Expr::Filter(Box::new($crate::tq_filter!(.$($path)*)))
+    }};
+
+    ($dollar:tt $var:ident $($path:tt)+) => {{
+        Expr::Filter(Box::new($crate::tq_filter!($dollar$var$($path)*)))
     }};
 
     ($dollar:tt $var:ident) => {{
