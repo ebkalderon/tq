@@ -28,14 +28,13 @@ pub fn function_call(input: &str) -> IResult<&str, ExprFnCall> {
 fn opt_param_sequence(input: &str) -> IResult<&str, Vec<FnParam>> {
     let param = delimited(tokens::space, tokens::fn_param, tokens::space);
     let params = separated_nonempty_list(char(';'), param);
-    let seq = delimited(pair(tokens::space, char('(')), params, char(')'));
+    let seq = delimited(char('('), params, char(')'));
     map(opt(seq), Option::unwrap_or_default)(input)
 }
 
 fn opt_arg_sequence(input: &str) -> IResult<&str, Vec<Expr>> {
     let args = separated_nonempty_list(pair(char(';'), tokens::space), expr);
-    let open = tuple((tokens::space, char('('), tokens::space));
-    let seq = delimited(open, args, char(')'));
+    let seq = delimited(pair(char('('), tokens::space), args, char(')'));
     map(opt(seq), Option::unwrap_or_default)(input)
 }
 
