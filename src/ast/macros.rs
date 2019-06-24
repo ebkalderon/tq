@@ -586,55 +586,87 @@ macro_rules! assign {
     // happens to be the comment token in Rust. The `tq_expr_and_str!()` macro will replace these
     // occurrences with the correct `//` form in the output string.
     (@rule ($($lhs:tt)+) / /= $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
-        let rhs = $crate::sum!($($rhs)+);
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
         Expr::AssignOp(BinaryOp::Alt, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) |= $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
-        let rhs = $crate::sum!($($rhs)+);
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
         Expr::AssignOp(BinaryOp::Pipe, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) += $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
-        let rhs = $crate::sum!($($rhs)+);
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
         Expr::AssignOp(BinaryOp::Add, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) -= $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
-        let rhs = $crate::sum!($($rhs)+);
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
         Expr::AssignOp(BinaryOp::Sub, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) *= $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
-        let rhs = $crate::sum!($($rhs)+);
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
         Expr::AssignOp(BinaryOp::Sub, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) /= $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
-        let rhs = $crate::sum!($($rhs)+);
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
         Expr::AssignOp(BinaryOp::Sub, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) %= $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
-        let rhs = $crate::sum!($($rhs)+);
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
         Expr::AssignOp(BinaryOp::Sub, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) = $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
-        let rhs = $crate::sum!($($rhs)+);
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
         Expr::Assign(Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($prev:tt)*) $next:tt $($rest:tt)*) => {
         $crate::assign!(@rule ($($prev)* $next) $($rest)*)
+    };
+
+    (@rule ($($expr:tt)+)) => {
+        $crate::logical!($($expr)+)
+    };
+
+    ( $first:tt $($rest:tt)* ) => {{
+        #[allow(unused_imports)]
+        use $crate::ast::*;
+        #[allow(unused_imports)]
+        use $crate::ast::tokens::*;
+        $crate::assign!(@rule ($first) $($rest)*)
+    }};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! logical {
+    (@rule ($($lhs:tt)+) and $($rhs:tt)+) => {{
+        let lhs = $crate::sum!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::Binary(BinaryOp::And, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($lhs:tt)+) or $($rhs:tt)+) => {{
+        let lhs = $crate::sum!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::Binary(BinaryOp::Or, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($prev:tt)*) $next:tt $($rest:tt)*) => {
+        $crate::logical!(@rule ($($prev)* $next) $($rest)*)
     };
 
     (@rule ($($expr:tt)+)) => {
@@ -646,7 +678,7 @@ macro_rules! assign {
         use $crate::ast::*;
         #[allow(unused_imports)]
         use $crate::ast::tokens::*;
-        $crate::assign!(@rule ($first) $($rest)*)
+        $crate::logical!(@rule ($first) $($rest)*)
     }};
 }
 
