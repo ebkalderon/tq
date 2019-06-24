@@ -81,18 +81,15 @@ fn label(input: &str) -> IResult<&str, Expr> {
 }
 
 fn assign(input: &str) -> IResult<&str, Expr> {
-    let alt_ = map(tag("//"), |_| BinaryOp::Alt);
     let pipe = map(char('|'), |_| BinaryOp::Pipe);
-    let stream = alt((alt_, pipe));
-
     let add = map(char('+'), |_| BinaryOp::Add);
     let sub = map(char('-'), |_| BinaryOp::Sub);
     let mul = map(char('*'), |_| BinaryOp::Mul);
+    let alt_ = map(tag("//"), |_| BinaryOp::Alt);
     let div = map(char('/'), |_| BinaryOp::Div);
     let rem = map(char('%'), |_| BinaryOp::Mod);
-    let arithmetic = alt((add, sub, mul, div, rem));
 
-    let op = terminated(opt(alt((stream, arithmetic))), char('='));
+    let op = terminated(opt(alt((pipe, add, sub, mul, alt_, div, rem))), char('='));
     let expr = pair(logical, opt(pair(terminated(op, tokens::space), logical)));
     map(expr, |(expr, assign)| match assign {
         Some((Some(op), value)) => Expr::AssignOp(op, Box::new(expr), Box::new(value)),
