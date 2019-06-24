@@ -7,7 +7,9 @@
 ///
 /// # Limitations
 ///
-/// This macro cannot parse highly complex filters due to limitations of `macro_rules` in Rust.
+/// Due to limitations of `macro_rules` in Rust, certain complex expressions might need extra
+/// parentheses to reduce ambiguity and aid parsing.
+///
 /// Also, if the compiler complains about hitting a certain recursion limit, try adding the
 /// following module attribute to the root file of your crate:
 ///
@@ -492,7 +494,7 @@ macro_rules! pipe {
     }};
 
     (@rule ($($lhs:tt)+) | $($rhs:tt)+) => {{
-        let lhs = $crate::pipe!($($lhs)+);
+        let lhs = $crate::chain!($($lhs)+);
         let rhs = $crate::pipe!($($rhs)+);
         Expr::Binary(BinaryOp::Pipe, Box::new(lhs), Box::new(rhs))
     }};
@@ -518,7 +520,7 @@ macro_rules! pipe {
 #[macro_export]
 macro_rules! chain {
     (@rule ($($lhs:tt)+) , $($rhs:tt)+) => {{
-        let lhs = $crate::chain!($($lhs)+);
+        let lhs = $crate::fn_decl!($($lhs)+);
         let rhs = $crate::chain!($($rhs)+);
         Expr::Binary(BinaryOp::Comma, Box::new(lhs), Box::new(rhs))
     }};
@@ -581,13 +583,13 @@ macro_rules! fn_decl {
 #[macro_export]
 macro_rules! sum {
     (@rule ($($lhs:tt)+) + $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
+        let lhs = $crate::product!($($lhs)+);
         let rhs = $crate::sum!($($rhs)+);
         Expr::Binary(BinaryOp::Add, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) - $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
+        let lhs = $crate::product!($($lhs)+);
         let rhs = $crate::sum!($($rhs)+);
         Expr::Binary(BinaryOp::Sub, Box::new(lhs), Box::new(rhs))
     }};
@@ -616,25 +618,25 @@ macro_rules! product {
     // happens to be the comment token in Rust. The `tq_expr_and_str!()` macro will replace these
     // occurrences with the correct `//` form in the output string.
     (@rule ($($lhs:tt)+) / / $($rhs:tt)+) => {{
-        let lhs = $crate::product!($($lhs)+);
+        let lhs = $crate::try_postfix!($($lhs)+);
         let rhs = $crate::product!($($rhs)+);
         Expr::Binary(BinaryOp::Alt, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) * $($rhs:tt)+) => {{
-        let lhs = $crate::product!($($lhs)+);
+        let lhs = $crate::try_postfix!($($lhs)+);
         let rhs = $crate::product!($($rhs)+);
         Expr::Binary(BinaryOp::Mul, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) / $($rhs:tt)+) => {{
-        let lhs = $crate::product!($($lhs)+);
+        let lhs = $crate::try_postfix!($($lhs)+);
         let rhs = $crate::product!($($rhs)+);
         Expr::Binary(BinaryOp::Div, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) % $($rhs:tt)+) => {{
-        let lhs = $crate::product!($($lhs)+);
+        let lhs = $crate::try_postfix!($($lhs)+);
         let rhs = $crate::product!($($rhs)+);
         Expr::Binary(BinaryOp::Mod, Box::new(lhs), Box::new(rhs))
     }};
