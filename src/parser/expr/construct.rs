@@ -56,3 +56,33 @@ fn table_value(input: &str) -> IResult<&str, Expr> {
     let paren = delimited(pair(char('('), tokens::space), table_value, char(')'));
     alt((paren, neg, pipe))(input)
 }
+
+#[cfg(test)]
+mod tests {
+    use nom::combinator::all_consuming;
+
+    use super::*;
+    use crate::tq_expr_and_str;
+
+    #[test]
+    fn array() {
+        let (expected, string) = tq_expr_and_str!([]);
+        let (_, actual) = all_consuming(construct)(&string).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, string) = tq_expr_and_str!([.foo.bar[]]);
+        let (_, actual) = all_consuming(construct)(&string).unwrap();
+        assert_eq!(expected, actual);
+    }
+
+    #[test]
+    fn table() {
+        let (expected, string) = tq_expr_and_str!({});
+        let (_, actual) = all_consuming(construct)(&string).unwrap();
+        assert_eq!(expected, actual);
+
+        let (expected, string) = tq_expr_and_str!({ one = 1, two = -func(12), three = foo | bar });
+        let (_, actual) = all_consuming(construct)(&string).unwrap();
+        assert_eq!(expected, actual);
+    }
+}

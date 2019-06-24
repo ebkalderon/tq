@@ -215,6 +215,96 @@ macro_rules! tq_table_key {
 
 #[doc(hidden)]
 #[macro_export]
+macro_rules! tq_table_value {
+    ( ($($expr:tt)+) ) => {
+        $crate::tq_expr!($($expr)+)
+    };
+
+    ( -$($expr:tt)+ ) => {
+        Expr::Unary(UnaryOp::Neg, Box::new($crate::tq_table_value!($($expr)+)))
+    };
+
+    (@pipe ($($term:tt)+) | $($rest:tt)+) => {{
+        let lhs = $crate::term!($($term)+);
+        let rhs = $crate::tq_table_value!($($rest)+);
+        Expr::Binary(BinaryOp::Pipe, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@pipe ($($term:tt)+)) => {
+        $crate::term!($($term)+)
+    };
+
+    (@pipe ($($term:tt)+) $next:tt $($rest:tt)*) => {
+        $crate::tq_table_value!(@pipe ($($term)+ $next) $($rest)*)
+    };
+
+    ( $first:tt $($rest:tt)* ) => {{
+        #[allow(unused_imports)]
+        use $crate::ast::*;
+        #[allow(unused_imports)]
+        use $crate::ast::tokens::*;
+        $crate::tq_table_value!(@pipe ($first) $($rest)*)
+    }};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! tq_construct {
+    ( [ ] ) => {
+        Expr::Array(None)
+    };
+
+    ( [ $($expr:tt)+ ] ) => {
+        Expr::Array(Some(Box::new($crate::tq_expr!($($expr)+))))
+    };
+
+    ( { } ) => {
+        Expr::Table(Vec::new())
+    };
+
+    ( { $($members:tt)+ } ) => {
+        Expr::Table($crate::tq_construct!(@table $($members)+).collect())
+    };
+
+    (@member ($dollar:tt $var:ident = $($value:tt)+) , $($rest:tt)+) => {{
+        let member = ($crate::tq_table_key!($dollar$var), $crate::tq_table_value!($($value)+));
+        ::std::iter::once(member).chain($crate::tq_construct!(@table $($rest)+))
+    }};
+
+    (@member ($key:tt = $($value:tt)+) , $($rest:tt)+) => {{
+        let member = ($crate::tq_table_key!($key), $crate::tq_table_value!($($value)+));
+        ::std::iter::once(member).chain($crate::tq_construct!(@table $($rest)+))
+    }};
+
+    (@member ($dollar:tt $var:ident = $($value:tt)+)) => {
+        ::std::iter::once((
+            $crate::tq_table_key!($dollar$var),
+            $crate::tq_table_value!($($value)+),
+        ))
+    };
+
+    (@member ($key:tt = $($value:tt)+)) => {
+        ::std::iter::once((
+            $crate::tq_table_key!($key),
+            $crate::tq_table_value!($($value)+),
+        ))
+    };
+
+    (@member ($($members:tt)+) $next:tt $($rest:tt)*) => {
+        $crate::tq_construct!(@member ($($members)+ $next) $($rest)*)
+    };
+
+    (@table $first:tt $($rest:tt)* ) => {{
+        #[allow(unused_imports)]
+        use $crate::ast::*;
+        #[allow(unused_imports)]
+        use $crate::ast::tokens::*;
+        $crate::tq_construct!(@member ($first) $($rest)*)
+    }};
+}
+
+#[doc(hidden)]
+#[macro_export]
 macro_rules! tq_pattern {
     ( ($($pat:tt)+) ) => {
         $crate::tq_pattern!($($pat)+)
@@ -226,22 +316,49 @@ macro_rules! tq_pattern {
         ])
     };
 
-    ( { $($assign:tt)+ } ) => {
-        ExprPattern::Table(vec![
-            $crate::tq_pattern!(@assign $($assign)+)
-        ])
-    };
-
-    (@assign $key:tt = $($value:tt)+) => {
-        (
-            $crate::tq_table_key!($key),
-            $crate::tq_pattern!($($value)+),
-        )
+    ( { $($members:tt)+ } ) => {
+        ExprPattern::Table($crate::tq_pattern!(@table $($members)+).collect())
     };
 
     ( $dollar:tt $var:ident ) => {
         ExprPattern::Variable($crate::tq_token!($dollar$var))
     };
+
+    (@member ($dollar:tt $var:ident = $($value:tt)+) , $($rest:tt)+) => {{
+        let member = ($crate::tq_table_key!($dollar$var), $crate::tq_pattern!($($value)+));
+        ::std::iter::once(member).chain($crate::tq_pattern!(@table $($rest)+))
+    }};
+
+    (@member ($key:tt = $($value:tt)+) , $($rest:tt)+) => {{
+        let member = ($crate::tq_table_key!($key), $crate::tq_pattern!($($value)+));
+        ::std::iter::once(member).chain($crate::tq_pattern!(@table $($rest)+))
+    }};
+
+    (@member ($dollar:tt $var:ident = $($value:tt)+)) => {
+        ::std::iter::once((
+            $crate::tq_table_key!($dollar$var),
+            $crate::tq_pattern!($($value)+),
+        ))
+    };
+
+    (@member ($key:tt = $($value:tt)+)) => {
+        ::std::iter::once((
+            $crate::tq_table_key!($key),
+            $crate::tq_pattern!($($value)+),
+        ))
+    };
+
+    (@member ($($members:tt)+) $next:tt $($rest:tt)*) => {
+        $crate::tq_pattern!(@member ($($members)+ $next) $($rest)*)
+    };
+
+    (@table $first:tt $($rest:tt)* ) => {{
+        #[allow(unused_imports)]
+        use $crate::ast::*;
+        #[allow(unused_imports)]
+        use $crate::ast::tokens::*;
+        $crate::tq_pattern!(@member ($first) $($rest)*)
+    }};
 }
 
 #[doc(hidden)]
@@ -491,6 +608,12 @@ macro_rules! pipe {
         let pat = $crate::tq_pattern!($dollar$var);
         let bind = ExprBinding::new($crate::term!($($expr)+), pat);
         Expr::Binding(Box::new(bind), Box::new($crate::pipe!($($rest)+)))
+    }};
+
+    (@rule (label $dollar:tt $var:ident) | $($rest:tt)+) => {{
+        let label = Expr::Label(Label::from(concat!("$", stringify!($var))));
+        let expr = $crate::pipe!($($rest)+);
+        Expr::Binary(BinaryOp::Pipe, Box::new(label), Box::new(expr))
     }};
 
     (@rule ($($lhs:tt)+) | $($rhs:tt)+) => {{
@@ -812,41 +935,49 @@ macro_rules! unary {
 #[doc(hidden)]
 #[macro_export]
 macro_rules! term {
-    (($($expr:tt)+)) => {{
+    (($($expr:tt)+)) => {
         Expr::Paren(Box::new($crate::tq_expr!($($expr)+)))
-    }};
+    };
 
-    (..) => {{
+    ({ $($members:tt)* }) => {
+        $crate::tq_construct!({ $($members)* })
+    };
+
+    ([ $($expr:tt)* ]) => {
+        $crate::tq_construct!([ $($expr)* ])
+    };
+
+    (..) => {
         Expr::Filter(Box::new($crate::tq_filter!(..)))
-    }};
+    };
 
-    (.$($path:tt)*) => {{
+    (.$($path:tt)*) => {
         Expr::Filter(Box::new($crate::tq_filter!(.$($path)*)))
-    }};
+    };
 
-    ($dollar:tt $var:ident $($path:tt)+) => {{
+    ($dollar:tt $var:ident $($path:tt)+) => {
         Expr::Filter(Box::new($crate::tq_filter!($dollar$var$($path)*)))
-    }};
+    };
 
-    ($dollar:tt $var:ident) => {{
+    ($dollar:tt $var:ident) => {
         Expr::Variable($crate::tq_token!($dollar$var))
-    }};
+    };
 
-    (false) => {{
+    (false) => {
         Expr::Literal($crate::tq_token!(false))
-    }};
+    };
 
-    (true) => {{
+    (true) => {
         Expr::Literal($crate::tq_token!(true))
-    }};
+    };
 
-    (inf) => {{
+    (inf) => {
         Expr::Literal($crate::tq_token!(inf))
-    }};
+    };
 
-    (nan) => {{
+    (nan) => {
         Expr::Literal($crate::tq_token!(nan))
-    }};
+    };
 
     ($($fn_call:ident)::+) => {{
         let path = $crate::tq_token!(::$($fn_call)::+);
@@ -859,7 +990,7 @@ macro_rules! term {
         Expr::FnCall(ExprFnCall::new(path, args))
     }};
 
-    ($literal:expr) => {{
+    ($literal:expr) => {
         Expr::Literal($crate::tq_token!($literal))
-    }};
+    };
 }
