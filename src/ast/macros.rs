@@ -7,7 +7,9 @@
 ///
 /// # Limitations
 ///
-/// This macro cannot parse highly complex filters due to limitations of `macro_rules` in Rust.
+/// Due to limitations of `macro_rules` in Rust, certain complex expressions might need extra
+/// parentheses to reduce ambiguity and aid parsing.
+///
 /// Also, if the compiler complains about hitting a certain recursion limit, try adding the
 /// following module attribute to the root file of your crate:
 ///
@@ -492,7 +494,7 @@ macro_rules! pipe {
     }};
 
     (@rule ($($lhs:tt)+) | $($rhs:tt)+) => {{
-        let lhs = $crate::pipe!($($lhs)+);
+        let lhs = $crate::chain!($($lhs)+);
         let rhs = $crate::pipe!($($rhs)+);
         Expr::Binary(BinaryOp::Pipe, Box::new(lhs), Box::new(rhs))
     }};
@@ -518,7 +520,7 @@ macro_rules! pipe {
 #[macro_export]
 macro_rules! chain {
     (@rule ($($lhs:tt)+) , $($rhs:tt)+) => {{
-        let lhs = $crate::chain!($($lhs)+);
+        let lhs = $crate::fn_decl!($($lhs)+);
         let rhs = $crate::chain!($($rhs)+);
         Expr::Binary(BinaryOp::Comma, Box::new(lhs), Box::new(rhs))
     }};
@@ -565,7 +567,7 @@ macro_rules! fn_decl {
     };
 
     (@rule ($($expr:tt)+)) => {
-        $crate::sum!($($expr)+)
+        $crate::assign!($($expr)+)
     };
 
     ( $first:tt $($rest:tt)* ) => {{
@@ -579,15 +581,118 @@ macro_rules! fn_decl {
 
 #[doc(hidden)]
 #[macro_export]
+macro_rules! assign {
+    // Note that the alt (`//`) operator is separated by a space in this macro because it also
+    // happens to be the comment token in Rust. The `tq_expr_and_str!()` macro will replace these
+    // occurrences with the correct `//` form in the output string.
+    (@rule ($($lhs:tt)+) / /= $($rhs:tt)+) => {{
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::AssignOp(BinaryOp::Alt, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($lhs:tt)+) |= $($rhs:tt)+) => {{
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::AssignOp(BinaryOp::Pipe, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($lhs:tt)+) += $($rhs:tt)+) => {{
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::AssignOp(BinaryOp::Add, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($lhs:tt)+) -= $($rhs:tt)+) => {{
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::AssignOp(BinaryOp::Sub, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($lhs:tt)+) *= $($rhs:tt)+) => {{
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::AssignOp(BinaryOp::Sub, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($lhs:tt)+) /= $($rhs:tt)+) => {{
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::AssignOp(BinaryOp::Sub, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($lhs:tt)+) %= $($rhs:tt)+) => {{
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::AssignOp(BinaryOp::Sub, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($lhs:tt)+) = $($rhs:tt)+) => {{
+        let lhs = $crate::logical!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::Assign(Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($prev:tt)*) $next:tt $($rest:tt)*) => {
+        $crate::assign!(@rule ($($prev)* $next) $($rest)*)
+    };
+
+    (@rule ($($expr:tt)+)) => {
+        $crate::logical!($($expr)+)
+    };
+
+    ( $first:tt $($rest:tt)* ) => {{
+        #[allow(unused_imports)]
+        use $crate::ast::*;
+        #[allow(unused_imports)]
+        use $crate::ast::tokens::*;
+        $crate::assign!(@rule ($first) $($rest)*)
+    }};
+}
+
+#[doc(hidden)]
+#[macro_export]
+macro_rules! logical {
+    (@rule ($($lhs:tt)+) and $($rhs:tt)+) => {{
+        let lhs = $crate::sum!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::Binary(BinaryOp::And, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($lhs:tt)+) or $($rhs:tt)+) => {{
+        let lhs = $crate::sum!($($lhs)+);
+        let rhs = $crate::logical!($($rhs)+);
+        Expr::Binary(BinaryOp::Or, Box::new(lhs), Box::new(rhs))
+    }};
+
+    (@rule ($($prev:tt)*) $next:tt $($rest:tt)*) => {
+        $crate::logical!(@rule ($($prev)* $next) $($rest)*)
+    };
+
+    (@rule ($($expr:tt)+)) => {
+        $crate::sum!($($expr)+)
+    };
+
+    ( $first:tt $($rest:tt)* ) => {{
+        #[allow(unused_imports)]
+        use $crate::ast::*;
+        #[allow(unused_imports)]
+        use $crate::ast::tokens::*;
+        $crate::logical!(@rule ($first) $($rest)*)
+    }};
+}
+
+#[doc(hidden)]
+#[macro_export]
 macro_rules! sum {
     (@rule ($($lhs:tt)+) + $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
+        let lhs = $crate::product!($($lhs)+);
         let rhs = $crate::sum!($($rhs)+);
         Expr::Binary(BinaryOp::Add, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) - $($rhs:tt)+) => {{
-        let lhs = $crate::sum!($($lhs)+);
+        let lhs = $crate::product!($($lhs)+);
         let rhs = $crate::sum!($($rhs)+);
         Expr::Binary(BinaryOp::Sub, Box::new(lhs), Box::new(rhs))
     }};
@@ -616,25 +721,25 @@ macro_rules! product {
     // happens to be the comment token in Rust. The `tq_expr_and_str!()` macro will replace these
     // occurrences with the correct `//` form in the output string.
     (@rule ($($lhs:tt)+) / / $($rhs:tt)+) => {{
-        let lhs = $crate::product!($($lhs)+);
+        let lhs = $crate::try_postfix!($($lhs)+);
         let rhs = $crate::product!($($rhs)+);
         Expr::Binary(BinaryOp::Alt, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) * $($rhs:tt)+) => {{
-        let lhs = $crate::product!($($lhs)+);
+        let lhs = $crate::try_postfix!($($lhs)+);
         let rhs = $crate::product!($($rhs)+);
         Expr::Binary(BinaryOp::Mul, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) / $($rhs:tt)+) => {{
-        let lhs = $crate::product!($($lhs)+);
+        let lhs = $crate::try_postfix!($($lhs)+);
         let rhs = $crate::product!($($rhs)+);
         Expr::Binary(BinaryOp::Div, Box::new(lhs), Box::new(rhs))
     }};
 
     (@rule ($($lhs:tt)+) % $($rhs:tt)+) => {{
-        let lhs = $crate::product!($($lhs)+);
+        let lhs = $crate::try_postfix!($($lhs)+);
         let rhs = $crate::product!($($rhs)+);
         Expr::Binary(BinaryOp::Mod, Box::new(lhs), Box::new(rhs))
     }};
