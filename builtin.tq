@@ -231,7 +231,7 @@ def bsearch($target):
   else . as $in
     # state variable: [start, end, answer]
     # where start and end are the upper and lower offsets to use.
-    | [0, length-1, null]
+    | [0, length - 1, null]
     | until( .[0] > .[1] ;
              if .[2] != null then (.[1] = -1)               # i.e. break
              else
