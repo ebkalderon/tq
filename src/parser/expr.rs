@@ -92,7 +92,7 @@ fn assign(input: &str) -> IResult<&str, Expr> {
     let rem = map(char('%'), |_| BinaryOp::Mod);
     let arithmetic = alt((add, sub, mul, div, rem));
 
-    let op = terminated(opt(alt((arithmetic, stream))), char('='));
+    let op = terminated(opt(alt((stream, arithmetic))), char('='));
     let expr = pair(logical, opt(pair(terminated(op, tokens::space), logical)));
     map(expr, |(expr, assign)| match assign {
         Some((Some(op), value)) => Expr::AssignOp(op, Box::new(expr), Box::new(value)),
