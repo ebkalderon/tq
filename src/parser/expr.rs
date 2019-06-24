@@ -88,7 +88,7 @@ fn assign(input: &str) -> IResult<&str, Expr> {
     let add = map(char('+'), |_| BinaryOp::Add);
     let sub = map(char('-'), |_| BinaryOp::Sub);
     let mul = map(char('*'), |_| BinaryOp::Mul);
-    let div = map(char('*'), |_| BinaryOp::Div);
+    let div = map(char('/'), |_| BinaryOp::Div);
     let rem = map(char('%'), |_| BinaryOp::Mod);
     let arithmetic = alt((add, sub, mul, div, rem));
 
