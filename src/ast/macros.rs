@@ -610,6 +610,12 @@ macro_rules! pipe {
         Expr::Binding(Box::new(bind), Box::new($crate::pipe!($($rest)+)))
     }};
 
+    (@rule (label $dollar:tt $var:ident) | $($rest:tt)+) => {{
+        let label = Expr::Label(Label::from(concat!("$", stringify!($var))));
+        let expr = $crate::pipe!($($rest)+);
+        Expr::Binary(BinaryOp::Pipe, Box::new(label), Box::new(expr))
+    }};
+
     (@rule ($($lhs:tt)+) | $($rhs:tt)+) => {{
         let lhs = $crate::chain!($($lhs)+);
         let rhs = $crate::pipe!($($rhs)+);
