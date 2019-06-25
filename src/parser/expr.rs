@@ -71,7 +71,7 @@ fn binding(input: &str) -> IResult<&str, Expr> {
 
 fn label(input: &str) -> IResult<&str, Expr> {
     let label = map(label_decl, Expr::Label);
-    let label = terminated(label, tuple((tokens::space, char('|'), tokens::space)));
+    let label = terminated(label, pair(char('|'), tokens::space));
     let expr = pair(many0(label), assign);
     map(expr, |(decls, expr)| {
         decls.into_iter().rev().fold(expr, |expr, label| {
