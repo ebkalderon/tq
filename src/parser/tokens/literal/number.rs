@@ -80,14 +80,12 @@ fn digit_sequence(input: &str) -> IResult<&str, &str> {
 
 #[cfg(test)]
 mod tests {
-    use std::f64::{EPSILON, INFINITY, NAN, NEG_INFINITY};
+    use std::f64::{INFINITY, NAN, NEG_INFINITY};
 
-    use float_cmp::ApproxEq;
+    use float_cmp::{approx_eq, ApproxEq};
     use nom::combinator::all_consuming;
 
     use super::*;
-
-    const FLOAT_ULPS: i64 = 2;
 
     #[test]
     fn integer_literals() {
@@ -119,45 +117,45 @@ mod tests {
     #[test]
     fn float_literals() {
         let (_, bare_frac_float) = all_consuming(float)("1.23").expect("bare float failed");
-        assert!(bare_frac_float.approx_eq(&1.23, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, bare_frac_float, 1.23);
 
         let (_, neg_frac_float) = all_consuming(float)("-2.5").expect("negative float failed");
-        assert!(neg_frac_float.approx_eq(&-2.5, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, neg_frac_float, -2.5);
 
         let (_, pos_frac_float) = all_consuming(float)("+0.01").expect("positive float failed");
-        assert!(pos_frac_float.approx_eq(&0.01, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, pos_frac_float, 0.01);
 
         let (_, bare_exp_float) = all_consuming(float)("6E4").expect("bare exp float failed");
-        assert!(bare_exp_float.approx_eq(&6E4, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, bare_exp_float, 6E4);
 
         let (_, neg_exp_float) = all_consuming(float)("12E-3").expect("negative exp float failed");
-        assert!(neg_exp_float.approx_eq(&12E-3, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, neg_exp_float, 12E-3);
 
         let (_, pos_exp_float) = all_consuming(float)("6E+5").expect("positive exp float failed");
-        assert!(pos_exp_float.approx_eq(&6E+5, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, pos_exp_float, 6E+5);
 
         let (_, mixed_float) = all_consuming(float)("-3.6E4").expect("frac/exp float failed");
-        assert!(mixed_float.approx_eq(&-3.6E4, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, mixed_float, -3.6E4);
     }
 
     #[test]
     fn float_special_literals() {
         let (_, bare_inf_literal) = all_consuming(float)("inf").expect("bare inf failed");
-        assert!(bare_inf_literal.approx_eq(&INFINITY, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, bare_inf_literal, INFINITY);
 
         let (_, neg_inf_literal) = all_consuming(float)("-inf").expect("negative inf failed");
-        assert!(neg_inf_literal.approx_eq(&NEG_INFINITY, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, neg_inf_literal, NEG_INFINITY);
 
         let (_, pos_inf_literal) = all_consuming(float)("+inf").expect("positive inf failed");
-        assert!(pos_inf_literal.approx_eq(&INFINITY, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, pos_inf_literal, INFINITY);
 
         let (_, bare_nan_literal) = all_consuming(float)("nan").expect("bare nan failed");
-        assert!(bare_nan_literal.approx_eq(&NAN, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, bare_nan_literal, NAN);
 
         let (_, neg_nan_literal) = all_consuming(float)("-nan").expect("negative nan failed");
-        assert!(neg_nan_literal.approx_eq(&-NAN, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, neg_nan_literal, -NAN);
 
         let (_, pos_nan_literal) = all_consuming(float)("+nan").expect("positive nan failed");
-        assert!(pos_nan_literal.approx_eq(&NAN, FLOAT_ULPS as f64 * EPSILON, FLOAT_ULPS));
+        approx_eq!(f64, pos_nan_literal, NAN);
     }
 }
